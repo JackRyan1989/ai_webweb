@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { chat, list } from "./brains/ollama";
-import { ListResponse } from "ollama";
+import { ChatResponse, ListResponse } from "ollama";
 import Markdown from "react-markdown";
 import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
@@ -27,12 +27,13 @@ function renderResponse(reasoning: string, response: string) {
       height={40}
       alt="Picture of the author"
       className="m-auto"
+      unoptimized
     />
   ) : (
-    <>
+    <div className="prose">
       {reasoning ? renderReasoning(reasoning): null}
       <Markdown>{response}</Markdown>
-    </>
+    </div>
   );
 }
 
@@ -63,16 +64,38 @@ export default function Home() {
           event.preventDefault();
           setResponse("pending");
           const formData = new FormData(event.target as HTMLFormElement);
-          const response = await chat(formData);
-          if (typeof response != "string") {
-            const reasoning = separateReasoning(response.message.content)[0] ?? undefined
-            const responseContent = separateReasoning(response.message.content)[1] ?? undefined
+          const content = formData.get('input')
+          let model = formData.get('selectedModel')
+          if (typeof model !== "string") {
+              model = "deepseek-r1:1.5b"
+          }
+          const newQuery = {"role":"user", "content": content};
+          if (sessionStorage.getItem('history')) {
+            const oldHistory = JSON.parse(sessionStorage.getItem('history') ?? "[]");
+            oldHistory.push(newQuery);
+            const newHistory = JSON.stringify(oldHistory);
+            sessionStorage.setItem('history', newHistory)
+          } else {
+            sessionStorage.setItem('history', `[${JSON.stringify(newQuery)}]`)
+          }
+
+          const chatResponse = await chat(JSON.parse(sessionStorage.getItem('history') ?? "[]") as unknown as [], model);
+          const newResponse = {"role": "assistant", "content": (chatResponse as ChatResponse).message.content}
+
+          const oldHistory = JSON.parse(sessionStorage.getItem('history') ?? "[]");
+          oldHistory.push(newResponse);
+          const newHistory = JSON.stringify(oldHistory);
+          sessionStorage.setItem('history', newHistory)
+
+          if (typeof chatResponse != "string") {
+            const reasoning = separateReasoning(chatResponse.message.content)[0] ?? undefined
+            const responseContent = separateReasoning(chatResponse.message.content)[1] ?? undefined
             if (reasoning) {
               setReasoning(reasoning)
             }
-            setResponse(responseContent ?? response.message.content);
+            setResponse(responseContent ?? chatResponse.message.content);
           } else {
-            setResponse(response);
+            setResponse(chatResponse);
           }
         }}
       >

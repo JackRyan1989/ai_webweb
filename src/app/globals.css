@@ -11,3 +11,29 @@ body {
   line-height: 1.2;
   margin: .25rem;
 }
+
+code {
+  display: inline-block;
+  background-color: aliceblue;
+  font-size: 1rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  margin: .25rem;
+  border: 1px solid black;
+  border-radius: .25rem/.25rem;
+  width: max-content;
+}
+
+ol, ul {
+  list-style-position: inside;
+  list-style: square;
+  margin-left: 1.25rem;
+}
+
+p, li {
+  margin: 1.25rem 0;
+}
+
+p:last-of-type {
+  margin-top: 0;
+}
