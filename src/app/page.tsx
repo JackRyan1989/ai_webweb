@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { SyntheticEvent, useEffect, useState } from "react";
 import { chat, list } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import Markdown from "react-markdown";
@@ -7,34 +7,36 @@ import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
 
 function separateReasoning(response: string) {
-  return response.split('</think>')
+  return response.split("</think>");
 }
 
 function renderReasoning(reasoning: string) {
   return (
-      <details>
-        <summary>Rationale</summary>
-        {reasoning.replaceAll('<think>', '')}
-      </details>
-  )
+    <details>
+      <summary>Rationale</summary>
+      {reasoning.replaceAll("<think>", "")}
+    </details>
+  );
 }
 
 function renderResponse(reasoning: string, response: string) {
- return response === "pending" ? (
-    <Image
-      src={blinkie}
-      width={300}
-      height={40}
-      alt="Picture of the author"
-      className="m-auto"
-      unoptimized
-    />
-  ) : (
-    <div className="prose">
-      {reasoning ? renderReasoning(reasoning): null}
-      <Markdown>{response}</Markdown>
-    </div>
-  );
+  return response === "pending"
+    ? (
+      <Image
+        src={blinkie}
+        width={300}
+        height={40}
+        alt="Picture of the author"
+        className="m-auto"
+        unoptimized
+      />
+    )
+    : (
+      <div className="prose">
+        {reasoning.length > 0 ? renderReasoning(reasoning) : null}
+        <Markdown>{response}</Markdown>
+      </div>
+    );
 }
 
 export default function Home() {
@@ -55,48 +57,62 @@ export default function Home() {
     setQuery(event?.target?.value ?? "");
   };
 
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setResponse("pending");
+    const formData = new FormData(event.target as HTMLFormElement);
+    const content = formData.get("input");
+    let model = formData.get("selectedModel");
+    if (typeof model !== "string") {
+      model = "deepseek-r1:1.5b";
+    }
+    const newQuery = { "role": "user", "content": content };
+    if (sessionStorage.getItem("history")) {
+      const oldHistory = JSON.parse(sessionStorage.getItem("history") ?? "[]");
+      oldHistory.push(newQuery);
+      const newHistory = JSON.stringify(oldHistory);
+      sessionStorage.setItem("history", newHistory);
+    } else {
+      sessionStorage.setItem("history", `[${JSON.stringify(newQuery)}]`);
+    }
+
+    const chatResponse = await chat(
+      JSON.parse(sessionStorage.getItem("history") ?? "[]") as unknown as [],
+      model,
+    );
+
+    const newResponse = {
+      "role": "assistant",
+      "content": (chatResponse as ChatResponse).message.content,
+    };
+
+    const oldHistory = JSON.parse(sessionStorage.getItem("history") ?? "[]");
+    oldHistory.push(newResponse);
+    const newHistory = JSON.stringify(oldHistory);
+    sessionStorage.setItem("history", newHistory);
+
+    console.log("Model", model)
+
+    if (model == "deepseek-r1:1.5b") {
+      const responseContent =
+        separateReasoning(chatResponse.message.content)[1] ?? undefined;
+        const responseReasoning = separateReasoning(chatResponse.message.content)[0] ?? undefined;
+      console.log(responseReasoning);
+        setReasoning(responseReasoning);
+      setResponse(responseContent);
+    } else {
+      setReasoning("")
+      setResponse(chatResponse.message.content);
+    }
+  };
+
   return (
     <main className="m-auto p-2">
       <form
         id="oracleHole"
         className="grid grid-cols-1 grid-rows-2 gap-4 m-8"
         onSubmit={async (event) => {
-          event.preventDefault();
-          setResponse("pending");
-          const formData = new FormData(event.target as HTMLFormElement);
-          const content = formData.get('input')
-          let model = formData.get('selectedModel')
-          if (typeof model !== "string") {
-              model = "deepseek-r1:1.5b"
-          }
-          const newQuery = {"role":"user", "content": content};
-          if (sessionStorage.getItem('history')) {
-            const oldHistory = JSON.parse(sessionStorage.getItem('history') ?? "[]");
-            oldHistory.push(newQuery);
-            const newHistory = JSON.stringify(oldHistory);
-            sessionStorage.setItem('history', newHistory)
-          } else {
-            sessionStorage.setItem('history', `[${JSON.stringify(newQuery)}]`)
-          }
-
-          const chatResponse = await chat(JSON.parse(sessionStorage.getItem('history') ?? "[]") as unknown as [], model);
-          const newResponse = {"role": "assistant", "content": (chatResponse as ChatResponse).message.content}
-
-          const oldHistory = JSON.parse(sessionStorage.getItem('history') ?? "[]");
-          oldHistory.push(newResponse);
-          const newHistory = JSON.stringify(oldHistory);
-          sessionStorage.setItem('history', newHistory)
-
-          if (typeof chatResponse != "string") {
-            const reasoning = separateReasoning(chatResponse.message.content)[0] ?? undefined
-            const responseContent = separateReasoning(chatResponse.message.content)[1] ?? undefined
-            if (reasoning) {
-              setReasoning(reasoning)
-            }
-            setResponse(responseContent ?? chatResponse.message.content);
-          } else {
-            setResponse(chatResponse);
-          }
+          handleSubmit(event);
         }}
       >
         <div className="m-auto p-0">
@@ -107,7 +123,11 @@ export default function Home() {
           <label className="text-xs m-0 h-min" htmlFor="modelSelect">
             Select brain
           </label>
-          <select name="selectedModel" id="modelSelect" className="w-min p-0 m-0">
+          <select
+            name="selectedModel"
+            id="modelSelect"
+            className="w-min p-0 m-0"
+          >
             {models.models?.length > 0
               ? models?.models.map((model) => {
                 return (
@@ -139,7 +159,7 @@ export default function Home() {
       <section aria-labelledby="output" className="m-8 p-2">
         <h2 id="output" className="sr-only">Output</h2>
         <div id="outputContainer">
-              {renderResponse(reasoning, response)}
+          {renderResponse(reasoning, response)}
         </div>
       </section>
     </main>
