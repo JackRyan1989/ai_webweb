@@ -63,10 +63,13 @@ export default function Home() {
     const formData = new FormData(event.target as HTMLFormElement);
     const content = formData.get("input");
     let model = formData.get("selectedModel");
+
     if (typeof model !== "string") {
       model = "deepseek-r1:1.5b";
     }
+
     const newQuery = { "role": "user", "content": content };
+
     if (sessionStorage.getItem("history")) {
       const oldHistory = JSON.parse(sessionStorage.getItem("history") ?? "[]");
       oldHistory.push(newQuery);
@@ -91,17 +94,12 @@ export default function Home() {
     const newHistory = JSON.stringify(oldHistory);
     sessionStorage.setItem("history", newHistory);
 
-    console.log("Model", model)
-
     if (model == "deepseek-r1:1.5b") {
-      const responseContent =
-        separateReasoning(chatResponse.message.content)[1] ?? undefined;
-        const responseReasoning = separateReasoning(chatResponse.message.content)[0] ?? undefined;
-      console.log(responseReasoning);
-        setReasoning(responseReasoning);
+      const [responseReasoning, responseContent] = separateReasoning(chatResponse.message.content)
+      setReasoning(responseReasoning);
       setResponse(responseContent);
     } else {
-      setReasoning("")
+      setReasoning("");
       setResponse(chatResponse.message.content);
     }
   };
