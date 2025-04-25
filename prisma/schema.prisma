@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// For the model structure, I'm thinking that a single table, where for each turn of the conversation we generate a new
+// row in that table.
+model Session {
+  id Int @id @default(autoincrement())
+  conversations Conversation[]
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id Int @id @default(autoincrement())
+  session Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+  role String
+  content String
+  createdAt DateTime @default(now())
+}

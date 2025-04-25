@@ -9,7 +9,7 @@ body {
   font-size: 22px;
   color: black;
   line-height: 1.2;
-  margin: .25rem;
+  margin: 0.25rem;
 }
 
 code {
@@ -18,9 +18,9 @@ code {
   font-size: 1rem;
   padding: 0 1rem;
   box-sizing: border-box;
-  margin: .25rem;
+  margin: 0.25rem;
   border: 1px solid black;
-  border-radius: .25rem/.25rem;
+  border-radius: 0.25rem/0.25rem;
   width: max-content;
 }
 

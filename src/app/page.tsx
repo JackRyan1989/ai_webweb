@@ -5,6 +5,7 @@ import { ChatResponse, ListResponse } from "ollama";
 import Markdown from "react-markdown";
 import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
+import {createConversation, createSession, getAllSessions} from "./db/query"
 
 function separateReasoning(response: string) {
   return response.split("</think>");
@@ -44,6 +45,7 @@ export default function Home() {
   const [response, setResponse] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [models, setModels] = useState([] as unknown as ListResponse);
+  const [sessions, setSessions] = useState([] as unknown)
 
   useEffect(() => {
     async function fetchModelList() {
@@ -53,6 +55,18 @@ export default function Home() {
     fetchModelList();
   }, []);
 
+  useEffect(() => {
+    async function fetchSessions() {
+      const {status, payload}  = await getAllSessions()
+      if (status == "failure") {
+        console.error('Failure loading sessions')
+        setSessions([])
+      }
+      setSessions(payload)
+    }
+    fetchSessions()
+  }, [])
+
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setQuery(event?.target?.value ?? "");
   };
@@ -61,14 +75,32 @@ export default function Home() {
     event.preventDefault();
     setResponse("pending");
     const formData = new FormData(event.target as HTMLFormElement);
-    const content = formData.get("input");
+    const content = String(formData.get("input"));
     let model = formData.get("selectedModel");
 
     if (typeof model !== "string") {
       model = "deepseek-r1:1.5b";
     }
 
-    const newQuery = { "role": "user", "content": content };
+    const newQuery = { "role": "user", "content": content, "sessionId": 0};
+
+    try {
+      const sesh = await createSession()
+      console.log('Status', sesh.status)
+      if (sesh.status == "failure") {
+        throw "Failed to save conversation"
+      }
+      if (sesh.session?.id) {
+        newQuery.sessionId = sesh.session?.id;
+      }
+      const convo = await createConversation(newQuery)
+      console.log(convo.status)
+      if (convo.status == "failure") {
+        throw "Failed to save conversation"
+      }
+    } catch (e) {
+      console.error(e)
+    }
 
     if (sessionStorage.getItem("history")) {
       const oldHistory = JSON.parse(sessionStorage.getItem("history") ?? "[]");
@@ -95,12 +127,23 @@ export default function Home() {
     sessionStorage.setItem("history", newHistory);
 
     if (model == "deepseek-r1:1.5b") {
-      const [responseReasoning, responseContent] = separateReasoning(chatResponse.message.content)
+      const [responseReasoning, responseContent] = separateReasoning(
+        chatResponse.message.content,
+      );
       setReasoning(responseReasoning);
       setResponse(responseContent);
     } else {
       setReasoning("");
       setResponse(chatResponse.message.content);
+    }
+  };
+
+  const clearHistory = (): void => {
+    if (confirm("Are you sure you want to clear your chat history?")) {
+      sessionStorage.clear();
+      setResponse("");
+      setReasoning("");
+      setQuery("");
     }
   };
 
@@ -145,6 +188,8 @@ export default function Home() {
           cols={33}
           value={query}
           onChange={(event) => handleInput(event)}
+          minLength={1}
+          required={true}
         >
         </textarea>
         <button
@@ -152,6 +197,13 @@ export default function Home() {
           type="submit"
         >
           Talk to me
+        </button>
+        <button
+          onClick={clearHistory}
+          className="m-auto bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
+          type="button"
+        >
+          Clear History
         </button>
       </form>
       <section aria-labelledby="output" className="m-8 p-2">
