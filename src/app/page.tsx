@@ -5,6 +5,7 @@ import { ChatResponse, ListResponse } from "ollama";
 import Markdown from "react-markdown";
 import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
+import SessionDisplay from "./components/sessionsDisplay";
 import {createConversation, createSession, getAllSessions} from "./db/query"
 
 function separateReasoning(response: string) {
@@ -152,8 +153,12 @@ export default function Home() {
     }
   };
 
+  console.log(sessions)
+
   return (
-    <main className="m-auto p-2">
+    <main className="m-auto grid grid-cols-12 grid-rows-1 gap-1">
+      <aside className="sticky col-span-2 left-0 bg-white border-r-2 border-black">{Object.keys(sessions)}</aside>
+      <div className="grid grid-cols-1 grid-rows-2 col-span-10">
       <form
         id="oracleHole"
         className="grid grid-cols-1 grid-rows-2 gap-4 m-8"
@@ -217,6 +222,7 @@ export default function Home() {
           {renderResponse(reasoning, response)}
         </div>
       </section>
+      </div>
     </main>
   );
 }
