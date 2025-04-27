@@ -45,7 +45,8 @@ export default function Home() {
   const [response, setResponse] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [models, setModels] = useState([] as unknown as ListResponse);
-  const [sessions, setSessions] = useState([] as unknown)
+  const [sessions, setSessions] = useState([])
+  const [session, setSession] = useState(undefined as unknown as number)
 
   useEffect(() => {
     async function fetchModelList() {
@@ -82,16 +83,20 @@ export default function Home() {
       model = "deepseek-r1:1.5b";
     }
 
-    const newQuery = { "role": "user", "content": content, "sessionId": 0};
+    const newQuery = { "role": "user", "content": content, "sessionId": session ?? 0};
 
     try {
-      const sesh = await createSession()
-      console.log('Status', sesh.status)
-      if (sesh.status == "failure") {
-        throw "Failed to save conversation"
-      }
-      if (sesh.session?.id) {
-        newQuery.sessionId = sesh.session?.id;
+      if (!session) {
+        // Only create a new session if we are submitting a query and there is no session in state
+        const sesh = await createSession()
+        console.log('Status', sesh.status)
+        if (sesh.status == "failure") {
+          throw "Failed to save conversation"
+        }
+        if (sesh.session?.id) {
+          newQuery.sessionId = sesh.session.id;
+          setSession(sesh.session.id)
+        }
       }
       const convo = await createConversation(newQuery)
       console.log(convo.status)
