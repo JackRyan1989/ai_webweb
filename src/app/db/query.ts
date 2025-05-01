@@ -25,7 +25,7 @@ async function createConversation({role, content, model, sessionId}: Query) {
     try {
         const conversation = await prisma.conversation.create({
             data: {
-                content: Array.isArray(content) ? content.join('\n'): content,
+                content: content,
                 model: model,
                 role: role,
                 sessionId: sessionId as number
@@ -80,15 +80,5 @@ async function updateConversation(req) {
     // Basically add new content to conversation content
     return req
 }
-
-
-
-// main().then(async () => {
-//     await prisma.$disconnect()
-// }).catch( async (e) => {
-//     console.error(e)
-//     await prisma.$disconnect()
-//     process.exit(1)
-// })
 
 export { createSession, createConversation, getAllConversationsForASession, getAllSessions, getConversation, getSession, updateConversation, updateSession }
