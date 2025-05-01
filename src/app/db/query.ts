@@ -2,6 +2,7 @@
 
 import { PrismaClient } from "../../../generated/prisma";
 import { Conversation, Query } from  "./types"
+import { revalidatePath } from 'next/cache'
 
 const prisma = new PrismaClient()
 
@@ -14,17 +15,20 @@ async function createSession(conversation: Conversation = {}) {
     } catch (e) {
         console.log(e)
         return {status: 'failure', e}
+    } finally {
+        revalidatePath('/')
     }
 }
 
-async function createConversation({role, content, sessionId}: Query) {
+async function createConversation({role, content, model, sessionId}: Query) {
     // Create a new conversation table
     try {
         const conversation = await prisma.conversation.create({
             data: {
-                role: role,
                 content: Array.isArray(content) ? content.join('\n'): content,
-                sessionId: sessionId
+                model: model,
+                role: role,
+                sessionId: sessionId as number
             }
         })
         console.log("Conversation:", conversation)
@@ -32,6 +36,8 @@ async function createConversation({role, content, sessionId}: Query) {
     } catch (e) {
         console.log(e)
         return {status: 'failure', e}
+    } finally {
+        revalidatePath('/')
     }
 }
 
@@ -39,8 +45,16 @@ async function getSession(id: number) {
     return id
 }
 
-async function getAllConversations(seshID: number) {
-    return seshID;
+async function getAllConversationsForASession(seshID: number) {
+    try {
+        const conversations = await prisma.conversation.findMany({ select: {sessionId: seshID}})
+        return ({status: 'success', payload: conversations})
+    } catch (e) {
+        console.log(e)
+        return {status: 'failure', payload: e}
+    } finally {
+        revalidatePath('/')
+    }
 }
 
 async function getAllSessions() {
@@ -77,4 +91,4 @@ async function updateConversation(req) {
 //     process.exit(1)
 // })
 
-export { createSession, createConversation, getAllConversations, getAllSessions, getConversation, getSession, updateConversation, updateSession }
+export { createSession, createConversation, getAllConversationsForASession, getAllSessions, getConversation, getSession, updateConversation, updateSession }

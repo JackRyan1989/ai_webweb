@@ -16,5 +16,6 @@ export interface Session {
   export interface Query {
     role: string
     content: string | string[]
-    sessionId: number
+    sessionId: number | null
+    model: string
   }

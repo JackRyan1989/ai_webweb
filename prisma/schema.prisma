@@ -21,9 +21,10 @@ model Session {
 
 model Conversation {
   id Int @id @default(autoincrement())
-  session Session @relation(fields: [sessionId], references: [id])
-  sessionId Int
-  role String
   content String
   createdAt DateTime @default(now())
+  model String @default("gemma3:4b")
+  role String
+  session Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
 }
