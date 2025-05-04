@@ -1,5 +1,5 @@
 "use client";
-import {SetStateAction, SyntheticEvent, useEffect, useRef, useState} from "react";
+import { SyntheticEvent, useEffect, useRef, useState} from "react";
 import {chat, list} from "./brains/ollama";
 import {ChatResponse, ListResponse} from "ollama";
 import Markdown from "react-markdown";
@@ -7,7 +7,6 @@ import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
 import SessionDisplay from "./components/sessionsDisplay";
 import {createConversation, createSession, getAllConversationsForASession, getAllSessions, getSession} from "./db/query"
-import {Query} from "./db/types";
 
 function separateReasoning(response: string) {
     return response.split("</think>");

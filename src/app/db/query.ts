@@ -84,14 +84,14 @@ async function getConversation(convoID: number) {
     return convoID;
 }
 
-async function updateSession(req) {
-    // Not sure we'll need this because the linkage is already in the table schema
-    return req
-}
+// async function updateSession(req) {
+//     // Not sure when we'll need this because the linkage is already in the table schema
+//     return req
+// }
+//
+// async function updateConversation(req) {
+//     // Basically add new content to conversation content
+//     return req
+// }
 
-async function updateConversation(req) {
-    // Basically add new content to conversation content
-    return req
-}
-
-export { createSession, createConversation, getAllConversationsForASession, getAllSessions, getConversation, getSession, updateConversation, updateSession }
+export { createSession, createConversation, getAllConversationsForASession, getAllSessions, getConversation, getSession }
