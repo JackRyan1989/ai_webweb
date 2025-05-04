@@ -41,17 +41,28 @@ async function createConversation({role, content, model, sessionId}: Query) {
     }
 }
 
-async function getSession(id: number) {
-    return id
+async function getSession(seshId: number | null) {
+    try {
+        if (seshId == null) {
+            return {status: 'failure'}
+        }
+        const session = await prisma.session.findUnique({ where: {id: seshId}})
+        return ({status: 'success', payload: session})
+    } catch (e) {
+        console.log(e)
+        throw new Error(`Could not get all conversations for sessionId: ${seshId}`)
+    } finally {
+        revalidatePath('/')
+    }
 }
 
-async function getAllConversationsForASession(seshID: number) {
+async function getAllConversationsForASession(seshId: number) {
     try {
-        const conversations = await prisma.conversation.findMany({ select: {sessionId: seshID}})
+        const conversations = await prisma.conversation.findMany({ where: {sessionId: {equals: seshId}}})
         return ({status: 'success', payload: conversations})
     } catch (e) {
         console.log(e)
-        return {status: 'failure', payload: e}
+        throw new Error(`Could not get all conversations for sessionId: ${seshId}`)
     } finally {
         revalidatePath('/')
     }
@@ -63,7 +74,9 @@ async function getAllSessions() {
         return ({status: 'success', payload: sessions})
     } catch (e) {
         console.log(e)
-        return {status: 'failure', payload: e}
+        return {status: 'failure', payload: null}
+    } finally {
+        revalidatePath('/')
     }
 }
 
