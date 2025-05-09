@@ -5,7 +5,6 @@ import {ChatResponse, ListResponse} from "ollama";
 import Markdown from "react-markdown";
 import Image from "next/image";
 import blinkie from "../../public/blinkiesCafe-6b.gif";
-import SessionDisplay from "./components/sessionsDisplay";
 import {createConversation, createSession, getAllConversationsForASession, getAllSessions, getSession} from "./db/query"
 
 function separateReasoning(response: string) {
@@ -41,12 +40,11 @@ function renderResponse(reasoning: string, response: string) {
         );
 }
 
-async function fetchModelList(modelSetter: (arg: ListResponse) => void) {
-    const models = await list();
-    modelSetter(models);
+async function fetchModelList() {
+    return await list();
 }
 
-async function fetchSessions(): Promise<{ id: number, createdAt: Date }[] | null> {
+async function fetchSessions(): Promise<{ id: number, createdAt: Date }[] | []> {
     const {status, payload} = await getAllSessions()
     if (status == "failure") {
         throw new Error('Failure loading sessions')
@@ -79,8 +77,8 @@ export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
     const [reasoning, setReasoning] = useState("");
-    const [models, setModels] = useState([] as unknown as ListResponse);
-    const [sessions, setSessions] = useState({} as { id: number; createdAt: Date; }[] | null)
+    const models = useRef([] as unknown as ListResponse)
+    const [sessions, setSessions] = useState({} as { id: number; createdAt: Date; }[] | [])
     const session = useRef(null as number | null);
 
     const sessionInit = () => {
@@ -99,16 +97,21 @@ export default function Home() {
 
 // This is what we want done on page load
     useEffect(() => {
-        fetchModelList(setModels);
+            try {
+                fetchModelList().then((mods) => models.current = mods);
+            } catch {
+                throw new Error("Failed to fetch models")
+            }
 
-        fetchSessions().then((data): void => {
-            setSessions(data)
-        }).catch((error) => {
-            throw new Error(error)
-        });
+            fetchSessions().then((data): void => {
+                setSessions(data)
+            }).catch((error) => {
+                throw new Error(error)
+            });
 
-        sessionInit();
-    }, []);
+            sessionInit();
+        },
+        []);
 
     const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setQuery(event?.target?.value ?? "");
@@ -185,9 +188,19 @@ export default function Home() {
         }
     };
 
+    const sessionHandler=  (id: number) => {
+        window.alert(`Session ID: ${id}`);
+    }
+
     return (
         <main className="m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
-            <aside className="sticky col-span-2 left-0 bg-white border-r-2 border-black">{Object.keys(sessions)}</aside>
+            <aside className="sticky col-span-2 left-0 bg-white border-r-2 border-black">
+                {sessions.length > 0 &&
+                sessions.map((sesh) => (
+                <button onClick={() => sessionHandler(sesh.id)} className='min-w-min text-sm border-solid border-black outline p-[.5rem] m-[.5rem] rounded-xs bg-lime-100' key={sesh.id} id={String(sesh.id)}>Restore session {sesh.id}</button>
+                )
+                )}
+            </aside>
             <div className="col-span-10">
                 <form
                     id="oracleHole"
@@ -209,8 +222,8 @@ export default function Home() {
                             id="modelSelect"
                             className="w-min p-0 m-0"
                         >
-                            {models.models?.length > 0
-                                ? models?.models.map((model) => {
+                            {models.current.models?.length > 0
+                                ? models?.current.models.map((model) => {
                                     return (
                                         <option key={model.model} value={model.model}>
                                             {model.name}

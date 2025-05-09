@@ -74,7 +74,7 @@ async function getAllSessions() {
         return ({status: 'success', payload: sessions})
     } catch (e) {
         console.log(e)
-        return {status: 'failure', payload: null}
+        return {status: 'failure', payload: []}
     } finally {
         revalidatePath('/')
     }
