@@ -10,10 +10,8 @@ async function createSession(conversation: Conversation = {}) {
     // Create a new session table
     try {
         const session = await prisma.session.create({ data: { ...conversation } })
-        console.log("Session:", session)
         return {status: 'success', session}
     } catch (e) {
-        console.log(e)
         return {status: 'failure', e}
     } finally {
         revalidatePath('/')
@@ -68,6 +66,16 @@ async function getAllConversationsForASession(seshId: number) {
     }
 }
 
+async function getFirstConversationForASession(seshId: number) {
+    try {
+        const conversations = await prisma.conversation.findFirst({ where: {sessionId: {equals: seshId}}})
+        return ({status: 'success', payload: conversations})
+    } catch (e) {
+        console.log(e)
+        throw new Error(`Could not get all conversations for sessionId: ${seshId}`)
+    }
+}
+
 async function getAllSessions() {
     try {
         const sessions = await prisma.session.findMany()
@@ -94,4 +102,4 @@ async function getConversation(convoID: number) {
 //     return req
 // }
 
-export { createSession, createConversation, getAllConversationsForASession, getAllSessions, getConversation, getSession }
+export { createSession, createConversation, getAllConversationsForASession, getFirstConversationForASession, getAllSessions, getConversation, getSession }

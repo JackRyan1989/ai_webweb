@@ -8,6 +8,6 @@ export async function chat(content: { role: string; content: string; }[], model:
   });
 }
 
-export async function list() {
+export async function fetchModelList() {
   return ollama.list();
 }
