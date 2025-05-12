@@ -85,7 +85,6 @@ export default function Home() {
             setResponse("");
             setReasoning("");
             setQuery("");
-            setSession(null);
 
             fetchSessions().then((data): void => {
                 setSessions(data);
