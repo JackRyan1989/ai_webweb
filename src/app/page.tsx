@@ -7,6 +7,7 @@ import {
     getAllConversationsForASession,
 } from "./db/query";
 import { renderModelResult } from "./components/modelResponse";
+import PastConversations from "./components/pastConversations";
 import {fetchSessions, initializeSession, saveConversation} from "@/app/db_wrappers/middleware";
 
 function separateReasoning(response: string) {
@@ -22,6 +23,7 @@ export default function Home() {
         {} as { id: number; createdAt: Date }[] | [],
     );
     const [session, setSession] = useState(null as unknown as number | null);
+    const [allConversations, setAllConversations] = useState([] as { role: string; content: string }[])
 
     // Ties database call to frontend app
     const sessionInit = (s = session) => {
@@ -73,6 +75,7 @@ export default function Home() {
                     setResponse("");
                 }
                 const lastResponse = payload.pop();
+                setAllConversations(payload)
                 if (typeof lastResponse == "object") {
                     setResponse(lastResponse.content);
                 } else {
@@ -115,6 +118,7 @@ export default function Home() {
             conversations = payload.map((load) => {
                 return { role: load.role, content: load.content };
             });
+            setAllConversations(conversations)
         } else {
             throw new Error("Could not load conversations");
         }
@@ -143,6 +147,7 @@ export default function Home() {
         } else {
             setReasoning("");
             setResponse(chatResponse.message.content);
+            setAllConversations([...conversations, newResponse])
         }
     };
 
@@ -162,6 +167,19 @@ export default function Home() {
                 </>
             </aside>
             <div className="col-span-10">
+                <div className="text-center">
+                        <label htmlFor="oracleHole">Ai WebWeb</label>
+                        <p className="text-xs">
+                            for to make conversation with the brains
+                        </p>
+                    </div>
+                    <section aria-labelledby="output" className="m-8 p-2">
+                    <h2 id="output" className="sr-only">Output</h2>
+                    <PastConversations pastConversations={allConversations} />
+                    <div id="outputContainer">
+                        {renderModelResult(reasoning, response)}
+                    </div>
+                </section>
                 <form
                     id="oracleHole"
                     className="flex flex-col content-center gap-4 m-8"
@@ -169,12 +187,7 @@ export default function Home() {
                         await handleSubmit(event);
                     }}
                 >
-                    <div className="m-auto p-0">
-                        <label htmlFor="oracleHole">Ai WebWeb</label>
-                        <p className="text-xs">
-                            for to make conversation with the brains
-                        </p>
-                    </div>
+
                     <div className="flex flex-col">
                         <label
                             className="text-xs m-0 h-min"
@@ -227,12 +240,6 @@ export default function Home() {
                         Create New Session
                     </button>
                 </form>
-                <section aria-labelledby="output" className="m-8 p-2">
-                    <h2 id="output" className="sr-only">Output</h2>
-                    <div id="outputContainer">
-                        {renderModelResult(reasoning, response)}
-                    </div>
-                </section>
             </div>
         </main>
     );

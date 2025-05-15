@@ -26,6 +26,8 @@ export function renderModelResult(reasoning: string, response: string) {
         : (
             <div className="prose">
                 {reasoning.length > 0 ? renderReasoning(reasoning) : null}
+                <hr className="py-1"/>
+                <p className='mx-1 p-1 rounded-1 bg-blue-200'>assistant</p>
                 <Markdown>{response}</Markdown>
             </div>
         );

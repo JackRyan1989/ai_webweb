@@ -12,6 +12,10 @@ body {
   margin: 0.25rem;
 }
 
+pre {
+  text-wrap: auto;
+}
+
 code {
   display: inline-block;
   background-color: aliceblue;
@@ -21,7 +25,7 @@ code {
   margin: 0.25rem;
   border: 1px solid black;
   border-radius: 0.25rem/0.25rem;
-  width: max-content;
+  max-width: 90%;
 }
 
 ol, ul {
