@@ -27,8 +27,7 @@ export default function SessionDisplay(
                     return
                 }
             })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [sessions])
 
     return (
         sessions.map((sesh: { id: number }, index: number) => (

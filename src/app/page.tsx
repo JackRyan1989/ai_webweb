@@ -4,57 +4,13 @@ import { chat, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
 import {
-    createConversation,
-    createSession,
     getAllConversationsForASession,
-    getAllSessions,
-    getSession,
 } from "./db/query";
 import { renderModelResult } from "./components/modelResponse";
+import {fetchSessions, initializeSession, saveConversation} from "@/app/db_wrappers/middleware";
 
 function separateReasoning(response: string) {
     return response.split("</think>");
-}
-
-// Database wrapper function
-async function fetchSessions(): Promise<
-    { id: number; createdAt: Date }[] | []
-> {
-    const { status, payload } = await getAllSessions();
-    if (status == "failure") {
-        throw new Error("Failure loading sessions");
-    }
-    return payload;
-}
-
-// Database wrapper function
-// Should only happen on page load when we are synchronizing to our database
-async function initializeSession(session: number | null) {
-    try {
-        if (session == null) {
-            return await createSession();
-        } else {
-            return await getSession(session);
-        }
-    } catch {
-        throw new Error("Failed to initialize new session");
-    }
-}
-
-// Database wrapper function
-async function saveConversation(
-    query: {
-        role: string;
-        model: string;
-        sessionId: number | null;
-        content: string;
-    },
-) {
-    const convo = await createConversation(query);
-    if (convo.status == "failure") {
-        throw new Error("Failed to save conversation");
-    }
-    return convo;
 }
 
 export default function Home() {
@@ -68,13 +24,14 @@ export default function Home() {
     const [session, setSession] = useState(null as unknown as number | null);
 
     // Ties database call to frontend app
-    const sessionInit = () => {
-        initializeSession(session).then((sessionData): void => {
+    const sessionInit = (s = session) => {
+        initializeSession(s).then((sessionData): void => {
             if (sessionData?.session) {
                 setSession(sessionData?.session.id);
             } else if (sessionData?.payload) {
                 setSession(sessionData?.payload.id);
             }
+            fetchSessions().then(setSessions);
         }).catch((error) => {
             throw new Error(error);
         });
@@ -85,14 +42,7 @@ export default function Home() {
             setResponse("");
             setReasoning("");
             setQuery("");
-
-            fetchSessions().then((data): void => {
-                setSessions(data);
-            }).catch((error) => {
-                throw new Error(error);
-            });
-
-            sessionInit();
+            sessionInit(null);
         }
     };
 
@@ -104,20 +54,19 @@ export default function Home() {
             throw new Error("Failed to fetch models");
         }
 
+        sessionInit()
         fetchSessions().then((data): void => {
             setSessions(data);
         }).catch((error) => {
             throw new Error(error);
         });
-
-        sessionInit();
     }, // eslint-disable-next-line react-hooks/exhaustive-deps
     []);
 
     // This is what we want done when session changes:
     useEffect(() => {
         (async () => {
-            if (typeof session == "number") {
+            if (session) {
                 const { status, payload } =
                     await getAllConversationsForASession(session);
                 if (status != "success") {
@@ -129,6 +78,8 @@ export default function Home() {
                 } else {
                     setResponse("");
                 }
+            } else {
+                setResponse("")
             }
         })();
     }, [session]);
