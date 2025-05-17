@@ -6,7 +6,7 @@ import SessionDisplay from "./components/sessionsDisplay";
 import {
     getAllConversationsForASession,
 } from "./db/query";
-import { renderModelResult } from "./components/modelResponse";
+import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
 import {fetchSessions, initializeSession, saveConversation} from "@/app/db_wrappers/middleware";
 
@@ -17,34 +17,21 @@ function separateReasoning(response: string) {
 export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
+    const [loading, setLoading] = useState<boolean | null>(null);
     const [reasoning, setReasoning] = useState("");
-    const models = useRef([] as unknown as ListResponse);
-    const [sessions, setSessions] = useState(
-        {} as { id: number; createdAt: Date }[] | [],
+    const models = useRef<ListResponse>(null);
+    const [sessions, setSessions] = useState<{ id: number; createdAt: Date }[] | []>(
+        []
     );
-    const [session, setSession] = useState(null as unknown as number | null);
-    const [allConversations, setAllConversations] = useState([] as { role: string; content: string }[])
-
-    // Ties database call to frontend app
-    const sessionInit = (s = session) => {
-        initializeSession(s).then((sessionData): void => {
-            if (sessionData?.session) {
-                setSession(sessionData?.session.id);
-            } else if (sessionData?.payload) {
-                setSession(sessionData?.payload.id);
-            }
-            fetchSessions().then(setSessions);
-        }).catch((error) => {
-            throw new Error(error);
-        });
-    };
+    const [session, setSession] = useState<number | null>(null);
+    const [allConversations, setAllConversations] = useState<{ role: string; content: string }[]>([])
 
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
             setResponse("");
             setReasoning("");
             setQuery("");
-            sessionInit(null);
+            setSession(null);
         }
     };
 
@@ -56,13 +43,12 @@ export default function Home() {
             throw new Error("Failed to fetch models");
         }
 
-        sessionInit()
         fetchSessions().then((data): void => {
             setSessions(data);
         }).catch((error) => {
             throw new Error(error);
         });
-    }, // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
     []);
 
     // This is what we want done when session changes:
@@ -76,7 +62,7 @@ export default function Home() {
                 }
                 const lastResponse = payload.pop();
                 setAllConversations(payload)
-                if (typeof lastResponse == "object") {
+                if (typeof lastResponse == "object" && lastResponse.role === 'assistant') {
                     setResponse(lastResponse.content);
                 } else {
                     setResponse("");
@@ -94,29 +80,39 @@ export default function Home() {
     const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
         event.preventDefault();
         setResponse("pending");
+        setLoading(true);
         const formData = new FormData(event.target as HTMLFormElement);
         const content = String(formData.get("input"));
-        let model = formData.get("selectedModel");
+        const model = formData.get("selectedModel") as string;
+        let localSessionVar: number | null = null
 
-        if (typeof model != "string") {
-            model = "deepseek-r1:1.5b";
+        if (session === null) {
+            const sessionData = await initializeSession(session);
+            if ("session" in  sessionData && sessionData?.session) {
+                setSession(sessionData?.session.id);
+                localSessionVar = sessionData?.session.id
+            } else if ("payload" in sessionData && sessionData?.payload) {
+                setSession(sessionData?.payload.id);
+                localSessionVar = sessionData?.payload.id;
+            }
+            fetchSessions().then(setSessions);
         }
 
         const newQuery = {
             "role": "user",
             "content": content,
-            "sessionId": session,
+            "sessionId": session ?? localSessionVar,
             model: model,
         };
         // Create user statement
         await saveConversation(newQuery);
 
-        const convos = await getAllConversationsForASession(session!);
+        const convos = await getAllConversationsForASession(session ?? localSessionVar!);
         let conversations: { role: string; content: string }[];
         if (convos.status == "success") {
             const { payload } = convos;
             conversations = payload.map((load) => {
-                return { role: load.role, content: load.content };
+                return { role: load.role, content: load.content, sessionId: load.sessionId, };
             });
             setAllConversations(conversations)
         } else {
@@ -131,7 +127,7 @@ export default function Home() {
         const newResponse = {
             "role": "assistant",
             "content": (chatResponse as ChatResponse).message.content,
-            "sessionId": session,
+            "sessionId": session ?? localSessionVar,
             model: model,
         };
 
@@ -144,10 +140,12 @@ export default function Home() {
             );
             setReasoning(responseReasoning);
             setResponse(responseContent);
+            setLoading(false);
         } else {
             setReasoning("");
             setResponse(chatResponse.message.content);
             setAllConversations([...conversations, newResponse])
+            setLoading(false);
         }
     };
 
@@ -173,11 +171,11 @@ export default function Home() {
                             for to make conversation with the brains
                         </p>
                     </div>
-                    <section aria-labelledby="output" className="m-8 p-2">
+                    <section aria-labelledby="output" className="mx-8 mt-8 mb-0 p-2">
                     <h2 id="output" className="sr-only">Output</h2>
                     <PastConversations pastConversations={allConversations} />
                     <div id="outputContainer">
-                        {renderModelResult(reasoning, response)}
+                        <RenderModelResult loading={loading} reasoning={reasoning} response={response}/>
                     </div>
                 </section>
                 <form
@@ -200,8 +198,8 @@ export default function Home() {
                             id="modelSelect"
                             className="w-min p-0 m-0"
                         >
-                            {models.current.models?.length > 0
-                                ? models?.current.models.map((model) => {
+                            {models?.current && models.current.models?.length > 0
+                                ? models.current.models.map((model) => {
                                     return (
                                         <option
                                             key={model.model}

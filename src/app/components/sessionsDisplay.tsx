@@ -1,11 +1,13 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { getFirstConversationForASession } from '../db/query'
 
 const sessionHandler = (id: number, sessionSetter: (id: number) => void) => {
-    window.alert(`Set Session ID to ${id}?`);
-    sessionSetter(id);
+    if (confirm(`Set Session ID to ${id}?`)) {
+        sessionSetter(id);
+    }
+    return
 };
 
 export default function SessionDisplay(
@@ -16,17 +18,18 @@ export default function SessionDisplay(
     },
 ): ReactNode | Array<ReactNode> {
 
-    const conversations = useRef([] as string[]);
+    const [conversations, setConversations] = useState<string[]>([]);
 
     useEffect(() => {
             sessions.forEach(async ({id}) => {
                 const {status, payload} = await getFirstConversationForASession(id)
-                if (status == 'success') {
-                    conversations.current.push(payload?.content ?? `Resume session \#${id}`)
+                if (status == 'success' && payload?.content.length !== undefined) {
+                    setConversations([...conversations, payload.content])
                 } else {
                     return
                 }
             })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessions])
 
     return (
@@ -37,7 +40,7 @@ export default function SessionDisplay(
                 key={sesh.id}
                 id={String(sesh.id)}
             >
-                {conversations.current[index] || <span>Loading session...</span>}
+                {conversations[index]?.length > 0 ? conversations[index] : <span>Loading session...</span>}
             </button>
         ))
     );

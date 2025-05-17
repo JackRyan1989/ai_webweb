@@ -14,7 +14,7 @@ export default function PastConversations({ pastConversations }: PastConversatio
                 </summary>
                 {pastConversations.map((conversation, index) => {
                     const {content, role} = conversation
-                    return (
+                    return ( (pastConversations.length === 1 || index < pastConversations.length) &&
                         <div className="px-2 m-2" key={content.replaceAll(" ", '-')} id={role}>
                             <p className={`mx-1 p-1 rounded-1 ${role === 'user' ? 'bg-blue-100': 'bg-blue-200'}`}><span>{index + 1}{'. '}</span>{role}</p>
                             <Markdown>{content}</Markdown>
