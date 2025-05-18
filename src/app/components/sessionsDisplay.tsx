@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { getFirstConversationForASession } from '../db/query'
 
 const sessionHandler = (id: number, sessionSetter: (id: number) => void) => {
@@ -18,16 +18,15 @@ export default function SessionDisplay(
     },
 ): ReactNode | Array<ReactNode> {
 
-    const [conversations, setConversations] = useState<string[]>([]);
+    const [conversations, setConversations] = useState<{content: string, sessionId: number}[]>([]);
+    const interMedArray = useRef<{content: string, sessionId: number}[]>([])
 
     useEffect(() => {
-        console.log('useEffect triggered')
-            let interMedArray: string[] = []
             sessions.forEach(async ({id}) => {
                 const {status, payload} = await getFirstConversationForASession(id)
                 if (status == 'success' && payload?.content.length !== undefined) {
-                    interMedArray = [...interMedArray, payload.content]
-                    setConversations([...interMedArray, payload.content])
+                    interMedArray.current = [...interMedArray.current, {content: payload.content, sessionId: payload.sessionId}]
+                    setConversations([...interMedArray.current, {content: payload.content, sessionId: payload.sessionId}])
                 } else {
                     return
                 }
@@ -36,15 +35,17 @@ export default function SessionDisplay(
     }, [sessions])
 
     return (
-        sessions.map((sesh: { id: number }, index: number) => (
+        sessions.map((sesh: { id: number }, index: number) => {
+            const currConvo = conversations.filter((convo) => convo.sessionId === sesh.id)[0]
+            return (
             <button
                 onClick={() => sessionHandler(sesh.id, sessionSetter)}
                 className={`min-w-min text-sm border-solid border-black outline p-[.5rem] m-[.5rem] rounded-xs ${session === sesh.id ? 'bg-lime-200' : 'bg-transparent'}`}
                 key={sesh.id}
                 id={String(sesh.id)}
             >
-                {conversations[index] ?? <span>Loading session...</span>}
+                {currConvo?.content ?? <span>Loading session...</span>}
             </button>
-        ))
+        )})
     );
 }
