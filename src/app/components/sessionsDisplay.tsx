@@ -21,15 +21,18 @@ export default function SessionDisplay(
     const [conversations, setConversations] = useState<string[]>([]);
 
     useEffect(() => {
+        console.log('useEffect triggered')
+            let interMedArray: string[] = []
             sessions.forEach(async ({id}) => {
                 const {status, payload} = await getFirstConversationForASession(id)
                 if (status == 'success' && payload?.content.length !== undefined) {
-                    setConversations([...conversations, payload.content])
+                    interMedArray = [...interMedArray, payload.content]
+                    setConversations([...interMedArray, payload.content])
                 } else {
                     return
                 }
             })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [sessions])
 
     return (
@@ -40,7 +43,7 @@ export default function SessionDisplay(
                 key={sesh.id}
                 id={String(sesh.id)}
             >
-                {conversations[index]?.length > 0 ? conversations[index] : <span>Loading session...</span>}
+                {conversations[index] ?? <span>Loading session...</span>}
             </button>
         ))
     );
