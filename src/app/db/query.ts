@@ -29,7 +29,6 @@ async function createConversation({role, content, model, sessionId}: Query) {
                 sessionId: sessionId as number
             }
         })
-        console.log("Conversation:", conversation)
         return {status: 'success', conversation}
     } catch (e) {
         console.log(e)
@@ -92,14 +91,35 @@ async function getConversation(convoID: number) {
     return convoID;
 }
 
-// async function updateSession(req) {
-//     // Not sure when we'll need this because the linkage is already in the table schema
-//     return req
-// }
-//
-// async function updateConversation(req) {
-//     // Basically add new content to conversation content
-//     return req
-// }
+async function deleteConversations(seshId: number) {
+    try {
+        const deletedConversations = await prisma.conversation.deleteMany({
+            where: {
+                sessionId: seshId,
+            },
+          });
+          console.log(deletedConversations)
+          return {status: 'success'}
+    } catch (e) {
+        console.log(e)
+        return {status: 'failure', message: `${e}`}
+    }
+}
 
-export { createSession, createConversation, getAllConversationsForASession, getFirstConversationForASession, getAllSessions, getConversation, getSession }
+async function deleteSession(seshId: number) {
+    try {
+        const deletedSession = await prisma.session.delete({
+            where: {
+              id: seshId,
+            },
+          });
+          console.log(deletedSession)
+          return {status: 'success'}
+    } catch (e) {
+        console.log(e)
+        return {status: 'failure', message: `${e}`}
+    }
+}
+
+
+export { createSession, createConversation, deleteConversations, deleteSession, getAllConversationsForASession, getFirstConversationForASession, getAllSessions, getConversation, getSession }

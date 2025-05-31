@@ -40,7 +40,7 @@ export default function SessionDisplay(
     }, [sessions]);
 
     return (
-        sessions.map((sesh: { id: number }, index: number) => {
+        sessions.map((sesh: { id: number }) => {
             const currConvo = conversations.filter((convo) =>
                 convo.sessionId === sesh.id
             )[0];

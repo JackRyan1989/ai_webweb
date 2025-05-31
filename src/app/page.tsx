@@ -3,12 +3,11 @@ import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
-import {
-    getAllConversationsForASession,
+import { getAllConversationsForASession,
 } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
-import {fetchSessions, initializeSession, saveConversation} from "@/app/db_wrappers/middleware";
+import {fetchSessions, initializeSession, saveConversation, sessionDelete} from "@/app/db_wrappers/middleware";
 
 function separateReasoning(response: string) {
     return response.split("</think>");
@@ -34,6 +33,22 @@ export default function Home() {
             setSession(null);
         }
     };
+
+    const deleteCurrentSession = async (): Promise<void> => {
+        if (session === null) return;
+        if (confirm("Are you sure you want to delete the current session?")) {
+            const deletedSession = await sessionDelete(session)
+            if (deletedSession.status === "failure") {
+                throw new Error('Failure deleting session.')
+            }
+            setResponse("");
+            setReasoning("");
+            setQuery("");
+            setSession(null);
+            setAllConversations([])
+            fetchSessions().then(setSessions);
+        }
+    }
 
     // This is what we want done on page load
     useEffect(() => {
@@ -147,6 +162,7 @@ export default function Home() {
             setAllConversations([...conversations, newResponse])
             setLoading(false);
         }
+        setQuery("");
     };
 
     return (
@@ -230,13 +246,22 @@ export default function Home() {
                     >
                         Talk to me
                     </button>
+                    <div className="flex flex-col">
                     <button
                         onClick={createNewSession}
-                        className="m-auto bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
+                        className="my-2 bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
                         type="button"
                     >
                         Create New Session
                     </button>
+                    <button
+                        onClick={deleteCurrentSession}
+                        className="bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
+                        type="button"
+                    >
+                        Delete Current Session
+                    </button>
+                    </div>
                 </form>
             </div>
         </main>
