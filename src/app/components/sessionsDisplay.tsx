@@ -52,6 +52,8 @@ export default function SessionDisplay(
                     }`}
                     key={sesh.id}
                     id={String(sesh.id)}
+                    style={{'width': '-webkit-fill-available',
+                        'wordWrap': 'break-word'}}
                 >
                     {currConvo?.content ?? <span>Loading session...</span>}
                 </button>
