@@ -167,7 +167,7 @@ export default function Home() {
 
     return (
         <main className="m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
-            <aside className="sticky col-span-2 left-0 bg-white border-r-2 border-black">
+            <aside className="min-w-min col-span-2 left-0 bg-white border-r-2 border-black max-h-full overflow-y-scroll">
                 <>
                     {sessions.length > 0
                         ? (
@@ -180,7 +180,7 @@ export default function Home() {
                         : <span>No sessions available.</span>}
                 </>
             </aside>
-            <div className="col-span-10">
+            <div className="col-start-4 col-end-12">
                 <div className="text-center">
                         <label htmlFor="oracleHole">Ai WebWeb</label>
                         <p className="text-xs">
