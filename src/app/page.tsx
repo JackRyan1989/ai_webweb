@@ -3,6 +3,7 @@ import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
+import Button from './components/button'
 import { getAllConversationsForASession,
 } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
@@ -166,8 +167,8 @@ export default function Home() {
     };
 
     return (
-        <main className="m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
-            <aside className="min-w-min col-span-2 left-0 bg-white border-r-2 border-black max-h-full overflow-y-scroll">
+        <main className=" dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
+            <aside className="min-w-min col-span-2 left-0 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black max-h-full overflow-y-scroll">
                 <>
                     {sessions.length > 0
                         ? (
@@ -181,7 +182,7 @@ export default function Home() {
                 </>
             </aside>
             <div className="col-start-4 col-end-12">
-                <div className="text-center">
+                <div className="text-center my-3">
                         <label htmlFor="oracleHole">Ai WebWeb</label>
                         <p className="text-xs">
                             for to make conversation with the brains
@@ -212,7 +213,7 @@ export default function Home() {
                         <select
                             name="selectedModel"
                             id="modelSelect"
-                            className="w-min p-0 m-0"
+                            className="w-min p-2 m-0 dark:border-white border-2 rounded"
                         >
                             {models?.current && models.current.models?.length > 0
                                 ? models.current.models.map((model) => {
@@ -240,27 +241,24 @@ export default function Home() {
                         required={true}
                     >
                     </textarea>
-                    <button
-                        className="m-auto bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black "
+                    <Button
                         type="submit"
                     >
                         Talk to me
-                    </button>
+                    </Button>
                     <div className="flex flex-col">
-                    <button
-                        onClick={createNewSession}
-                        className="my-2 bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
+                    <Button
+                        clickHandler={createNewSession}
                         type="button"
                     >
                         Create New Session
-                    </button>
-                    <button
-                        onClick={deleteCurrentSession}
-                        className="bg-black border-black border-2 text-amber-50 p-2 w-max rounded hover:bg-white hover:text-black focus:bg-white focus:text-black"
+                    </Button>
+                    <Button
+                        clickHandler={deleteCurrentSession}
                         type="button"
                     >
                         Delete Current Session
-                    </button>
+                    </Button>
                     </div>
                 </form>
             </div>

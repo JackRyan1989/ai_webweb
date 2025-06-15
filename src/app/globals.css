@@ -20,12 +20,19 @@ code {
   display: inline-block;
   background-color: aliceblue;
   font-size: 1rem;
-  padding: 0 1rem;
+  padding: 0 2rem;
   box-sizing: border-box;
   margin: 0.25rem;
   border: 1px solid black;
   border-radius: 0.25rem/0.25rem;
   max-width: 90%;
+  word-wrap: break-word;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: rgb(253, 253, 253);
+    color: black;
+    border: dashed 2px orange;
+  }
 }
 
 ol, ul {

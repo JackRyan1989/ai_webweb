@@ -27,7 +27,7 @@ export function RenderModelResult({loading, reasoning, response}: {loading: bool
             <div className="prose">
                 {reasoning.length > 0 ? <RenderReasoning reasoning={reasoning}/> : null}
                 <hr className="py-1"/>
-                <p className='mx-1 p-1 rounded-1 bg-blue-200'>assistant</p>
+                <p className='mx-1 p-2 text-center rounded-[7] dark:text-black dark:bg-white italic bg-blue-200'>assistant</p>
                 <Markdown>{response}</Markdown>
             </div>
         );
