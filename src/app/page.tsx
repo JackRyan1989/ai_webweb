@@ -1,14 +1,16 @@
 "use client";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
-import { chat, fetchModelList } from "./brains/ollama";
+import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
 import Button from './components/button'
-import { getAllConversationsForASession,
+import ErrorRenderer from "./components/errorRenderer";
+import {
+    getAllConversationsForASession,
 } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
-import {fetchSessions, initializeSession, saveConversation, sessionDelete} from "@/app/db_wrappers/middleware";
+import { fetchSessions, initializeSession, saveConversation, sessionDelete } from "@/app/db_wrappers/middleware";
 
 function separateReasoning(response: string) {
     return response.split("</think>");
@@ -19,12 +21,13 @@ export default function Home() {
     const [response, setResponse] = useState("");
     const [loading, setLoading] = useState<boolean | null>(null);
     const [reasoning, setReasoning] = useState("");
-    const models = useRef<ListResponse>(null);
+    const models = useRef<ListResponse | ErrorObj>(null);
     const [sessions, setSessions] = useState<{ id: number; createdAt: Date }[] | []>(
         []
     );
     const [session, setSession] = useState<number | null>(null);
     const [allConversations, setAllConversations] = useState<{ role: string; content: string }[]>([])
+    const [errorState, setErrorState] = useState<ErrorObj>({ errStatus: '', message: '' })
 
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
@@ -53,19 +56,29 @@ export default function Home() {
 
     // This is what we want done on page load
     useEffect(() => {
-        try {
-            fetchModelList().then((mods) => models.current = mods);
-        } catch {
-            throw new Error("Failed to fetch models");
-        }
-
+        (async () => {
+            let res;
+            try {
+                res = await fetchModelList();
+            } catch {
+                res = {errStatus: 'error', message: 'Issue fetching models. Make sure ollama is running.'}
+            }
+            if ('errStatus' in res && res['errStatus'] === 'error') {
+                setErrorState(res)
+            } else {
+                models.current = res
+                if (errorState.errStatus && errorState.message) {
+                    setErrorState({ errStatus: '', message: '' })
+                }
+            }
+        })();
         fetchSessions().then((data): void => {
             setSessions(data);
         }).catch((error) => {
             throw new Error(error);
         });
     },
-    []);
+        []);
 
     // This is what we want done when session changes:
     useEffect(() => {
@@ -104,7 +117,7 @@ export default function Home() {
 
         if (session === null) {
             const sessionData = await initializeSession(session);
-            if ("session" in  sessionData && sessionData?.session) {
+            if ("session" in sessionData && sessionData?.session) {
                 setSession(sessionData?.session.id);
                 localSessionVar = sessionData?.session.id
             } else if ("payload" in sessionData && sessionData?.payload) {
@@ -168,6 +181,7 @@ export default function Home() {
 
     return (
         <main className=" dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
+            {errorState.errStatus && <ErrorRenderer errStatus={errorState.errStatus} message={errorState.message} />}
             <aside className="min-w-min col-span-2 left-0 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black max-h-full overflow-y-scroll">
                 <>
                     {sessions.length > 0
@@ -183,16 +197,16 @@ export default function Home() {
             </aside>
             <div className="col-start-4 col-end-12">
                 <div className="text-center my-3">
-                        <label htmlFor="oracleHole">Ai WebWeb</label>
-                        <p className="text-xs">
-                            for to make conversation with the brains
-                        </p>
-                    </div>
-                    <section aria-labelledby="output" className="mx-8 mt-8 mb-0 p-2">
+                    <label htmlFor="oracleHole">Ai WebWeb</label>
+                    <p className="text-xs">
+                        for to make conversation with the brains
+                    </p>
+                </div>
+                <section aria-labelledby="output" className="mx-8 mt-8 mb-0 p-2">
                     <h2 id="output" className="sr-only">Output</h2>
                     <PastConversations pastConversations={allConversations} />
                     <div id="outputContainer">
-                        <RenderModelResult loading={loading} reasoning={reasoning} response={response}/>
+                        <RenderModelResult loading={loading} reasoning={reasoning} response={response} />
                     </div>
                 </section>
                 <form
@@ -247,18 +261,18 @@ export default function Home() {
                         Talk to me
                     </Button>
                     <div className="flex flex-col">
-                    <Button
-                        clickHandler={createNewSession}
-                        type="button"
-                    >
-                        Create New Session
-                    </Button>
-                    <Button
-                        clickHandler={deleteCurrentSession}
-                        type="button"
-                    >
-                        Delete Current Session
-                    </Button>
+                        <Button
+                            clickHandler={createNewSession}
+                            type="button"
+                        >
+                            Create New Session
+                        </Button>
+                        <Button
+                            clickHandler={deleteCurrentSession}
+                            type="button"
+                        >
+                            Delete Current Session
+                        </Button>
                     </div>
                 </form>
             </div>
