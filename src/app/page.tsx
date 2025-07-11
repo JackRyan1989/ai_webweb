@@ -180,9 +180,9 @@ export default function Home() {
     };
 
     return (
-        <main className=" dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
+        <main className="dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
             {errorState.errStatus && <ErrorRenderer errStatus={errorState.errStatus} message={errorState.message} />}
-            <aside className="min-w-min col-span-2 left-0 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black max-h-full overflow-y-scroll">
+            <aside className="fixed max-w-min max-h-[100%] col-span-2 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black overflow-scroll">
                 <>
                     {sessions.length > 0
                         ? (
