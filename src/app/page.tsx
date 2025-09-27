@@ -10,7 +10,8 @@ import {
 } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
-import { fetchSessions, initializeSession, saveConversation, sessionDelete } from "@/app/db_wrappers/middleware";
+import {fetchLiveSessions, fetchSessions, initializeSession, saveConversation, sessionDelete } from "@/app/db_wrappers/middleware";
+import { archiveSession as archSesh} from "./db/query";
 
 function separateReasoning(response: string) {
     return response.split("</think>");
@@ -22,7 +23,7 @@ export default function Home() {
     const [loading, setLoading] = useState<boolean | null>(null);
     const [reasoning, setReasoning] = useState("");
     const models = useRef<ListResponse | ErrorObj>(null);
-    const [sessions, setSessions] = useState<{ id: number; createdAt: Date }[] | []>(
+    const [sessions, setSessions] = useState<{ id: number; createdAt: Date; archivedAt: Date | undefined; }[] | []>(
         []
     );
     const [session, setSession] = useState<number | null>(null);
@@ -51,6 +52,22 @@ export default function Home() {
             setSession(null);
             setAllConversations([])
             fetchSessions().then(setSessions);
+        }
+    }
+
+    const archiveSession = async (): Promise<void>  =>{
+        if (session === null) return;
+        if (confirm("Are you sure you want to archive this session?")) {
+            const archivedSesh = await archSesh(session)
+            if (archivedSesh.status === "failure") {
+                throw new Error('Failure archiving session.')
+            }
+            setResponse("");
+            setReasoning("");
+            setQuery("");
+            setSession(null);
+            setAllConversations([])
+            fetchLiveSessions().then(setSessions);
         }
     }
 
@@ -268,10 +285,10 @@ export default function Home() {
                             Create New Session
                         </Button>
                         <Button
-                            clickHandler={deleteCurrentSession}
+                            clickHandler={archiveSession}
                             type="button"
                         >
-                            Delete Current Session
+                            Archive Current Session
                         </Button>
                     </div>
                 </form>

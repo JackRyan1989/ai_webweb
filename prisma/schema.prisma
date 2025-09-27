@@ -17,13 +17,13 @@ model Session {
   id Int @id @default(autoincrement())
   conversations Conversation[]
   createdAt DateTime @default(now())
+  archived Boolean @default(false)
 }
 
 model Conversation {
   id Int @id @default(autoincrement())
   content String
   createdAt DateTime @default(now())
-  archivedAt DateTime @default(now())
   model String @default("gemma3:4b")
   role String
   session Session @relation(fields: [sessionId], references: [id])
