@@ -4,7 +4,8 @@ import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
 import Button from './components/button'
-import ErrorRenderer from "./components/errorRenderer";
+import Toaster from "./components/toaster/toaster";
+import toastEmitter from "./components/toaster/toastEmitter";
 import {
     getAllConversationsForASession,
 } from "./db/query";
@@ -28,7 +29,6 @@ export default function Home() {
     );
     const [session, setSession] = useState<number | null>(null);
     const [allConversations, setAllConversations] = useState<{ role: string; content: string }[]>([])
-    const [errorState, setErrorState] = useState<ErrorObj>({ errStatus: '', message: '' })
 
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
@@ -36,6 +36,7 @@ export default function Home() {
             setReasoning("");
             setQuery("");
             setSession(null);
+            toastEmitter('New Session Created!', 'info', 500)
         }
     };
 
@@ -44,7 +45,7 @@ export default function Home() {
         if (confirm("Are you sure you want to delete the current session?")) {
             const deletedSession = await sessionDelete(session)
             if (deletedSession.status === "failure") {
-                throw new Error('Failure deleting session.')
+                toastEmitter('Failure deleting session!', 'error', 2000)
             }
             setResponse("");
             setReasoning("");
@@ -60,7 +61,7 @@ export default function Home() {
         if (confirm("Are you sure you want to archive this session?")) {
             const archivedSesh = await archSesh(session)
             if (archivedSesh.status === "failure") {
-                throw new Error('Failure archiving session.')
+                toastEmitter('Failure archiving session!', 'error', 2000)
             }
             setResponse("");
             setReasoning("");
@@ -81,18 +82,15 @@ export default function Home() {
                 res = {errStatus: 'error', message: 'Issue fetching models. Make sure ollama is running.'}
             }
             if ('errStatus' in res && res['errStatus'] === 'error') {
-                setErrorState(res)
+                toastEmitter('Issue loading models. Is Ollama running?', 'error', 2000)
             } else {
                 models.current = res
-                if (errorState.errStatus && errorState.message) {
-                    setErrorState({ errStatus: '', message: '' })
-                }
             }
         })();
-        fetchSessions().then((data): void => {
-            setSessions(data);
-        }).catch((error) => {
-            throw new Error(error);
+        fetchLiveSessions().then((sessions): void => {
+            setSessions(sessions);
+        }).catch(() => {
+            toastEmitter('Error fetching sessions.', 'error', 2000)
         });
     },
         []);
@@ -137,11 +135,11 @@ export default function Home() {
             if ("session" in sessionData && sessionData?.session) {
                 setSession(sessionData?.session.id);
                 localSessionVar = sessionData?.session.id
-            } else if ("payload" in sessionData && sessionData?.payload) {
+            } else if ("payload" in sessionData && sessionData?.payload && "id" in sessionData?.payload) {
                 setSession(sessionData?.payload.id);
                 localSessionVar = sessionData?.payload.id;
             }
-            fetchSessions().then(setSessions);
+            fetchLiveSessions().then(setSessions);
         }
 
         const newQuery = {
@@ -198,7 +196,6 @@ export default function Home() {
 
     return (
         <main className="dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
-            {errorState.errStatus && <ErrorRenderer errStatus={errorState.errStatus} message={errorState.message} />}
             <aside className="fixed max-w-min max-h-[100%] col-span-2 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black overflow-scroll">
                 <>
                     {sessions.length > 0
@@ -293,6 +290,7 @@ export default function Home() {
                     </div>
                 </form>
             </div>
+            <Toaster/>
         </main>
     );
 }
