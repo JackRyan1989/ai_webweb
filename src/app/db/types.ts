@@ -11,6 +11,7 @@ export interface Session {
     role?: string
     content?: string
     createdAt?: Date
+    archivedAt?: Date
   }
 
   export interface Query {
