@@ -3,16 +3,20 @@ import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import SessionDisplay from "./components/sessionsDisplay";
-import Button from './components/button'
+import Button from "./components/button";
 import Toaster from "./components/toaster/toaster";
 import toastEmitter from "./components/toaster/toastEmitter";
-import {
-    getAllConversationsForASession,
-} from "./db/query";
+import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
-import {fetchLiveSessions, fetchSessions, initializeSession, saveConversation, sessionDelete } from "@/app/db_wrappers/middleware";
-import { archiveSession as archSesh} from "./db/query";
+import {
+    fetchLiveSessions,
+    fetchSessions,
+    initializeSession,
+    saveConversation,
+    sessionDelete,
+} from "@/app/db_wrappers/middleware";
+import { archiveSession as archSesh } from "./db/query";
 
 function separateReasoning(response: string) {
     return response.split("</think>");
@@ -24,11 +28,15 @@ export default function Home() {
     const [loading, setLoading] = useState<boolean | null>(null);
     const [reasoning, setReasoning] = useState("");
     const models = useRef<ListResponse | ErrorObj>(null);
-    const [sessions, setSessions] = useState<{ id: number; createdAt: Date; archivedAt: Date | undefined; }[] | []>(
-        []
+    const [sessions, setSessions] = useState<
+        { id: number; createdAt: Date; archivedAt: Date | undefined }[] | []
+    >(
+        [],
     );
     const [session, setSession] = useState<number | null>(null);
-    const [allConversations, setAllConversations] = useState<{ role: string; content: string }[]>([])
+    const [allConversations, setAllConversations] = useState<
+        { role: string; content: string }[]
+    >([]);
 
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
@@ -36,41 +44,50 @@ export default function Home() {
             setReasoning("");
             setQuery("");
             setSession(null);
-            toastEmitter('New Session Created!', 'info', 500)
+            toastEmitter("New Session Created!", "info", 1000);
         }
     };
 
     const deleteCurrentSession = async (): Promise<void> => {
         if (session === null) return;
         if (confirm("Are you sure you want to delete the current session?")) {
-            const deletedSession = await sessionDelete(session)
+            const deletedSession = await sessionDelete(session);
             if (deletedSession.status === "failure") {
-                toastEmitter('Failure deleting session!', 'error', 2000)
+                toastEmitter(
+                    deletedSession.message ?? "Failure deleting session!",
+                    "error",
+                    2000,
+                );
             }
             setResponse("");
             setReasoning("");
             setQuery("");
             setSession(null);
-            setAllConversations([])
+            setAllConversations([]);
             fetchSessions().then(setSessions);
         }
-    }
+    };
 
-    const archiveSession = async (): Promise<void>  =>{
+    const archiveSession = async (): Promise<void> => {
         if (session === null) return;
         if (confirm("Are you sure you want to archive this session?")) {
-            const archivedSesh = await archSesh(session)
+            const archivedSesh = await archSesh(session);
             if (archivedSesh.status === "failure") {
-                toastEmitter('Failure archiving session!', 'error', 2000)
+                toastEmitter(
+                    archivedSesh.message ?? "Failure archiving session!",
+                    "error",
+                    2000,
+                );
             }
             setResponse("");
             setReasoning("");
             setQuery("");
             setSession(null);
-            setAllConversations([])
+            setAllConversations([]);
             fetchLiveSessions().then(setSessions);
+            toastEmitter("Session Archived", "info", 1000);
         }
-    }
+    };
 
     // This is what we want done on page load
     useEffect(() => {
@@ -79,21 +96,24 @@ export default function Home() {
             try {
                 res = await fetchModelList();
             } catch {
-                res = {errStatus: 'error', message: 'Issue fetching models. Make sure ollama is running.'}
+                res = {
+                    errStatus: "error",
+                    message:
+                        "Issue fetching models. Make sure ollama is running.",
+                };
             }
-            if ('errStatus' in res && res['errStatus'] === 'error') {
-                toastEmitter('Issue loading models. Is Ollama running?', 'error', 2000)
+            if ("errStatus" in res && res["errStatus"] === "error") {
+                toastEmitter(res.message, "error", 2000);
             } else {
-                models.current = res
+                models.current = res;
             }
         })();
         fetchLiveSessions().then((sessions): void => {
             setSessions(sessions);
         }).catch(() => {
-            toastEmitter('Error fetching sessions.', 'error', 2000)
+            toastEmitter("Error fetching sessions.", "error", 2000);
         });
-    },
-        []);
+    }, []);
 
     // This is what we want done when session changes:
     useEffect(() => {
@@ -105,14 +125,17 @@ export default function Home() {
                     setResponse("");
                 }
                 const lastResponse = payload.pop();
-                setAllConversations(payload)
-                if (typeof lastResponse == "object" && lastResponse.role === 'assistant') {
+                setAllConversations(payload);
+                if (
+                    typeof lastResponse == "object" &&
+                    lastResponse.role === "assistant"
+                ) {
                     setResponse(lastResponse.content);
                 } else {
                     setResponse("");
                 }
             } else {
-                setResponse("")
+                setResponse("");
             }
         })();
     }, [session]);
@@ -128,14 +151,17 @@ export default function Home() {
         const formData = new FormData(event.target as HTMLFormElement);
         const content = String(formData.get("input"));
         const model = formData.get("selectedModel") as string;
-        let localSessionVar: number | null = null
+        let localSessionVar: number | null = null;
 
         if (session === null) {
             const sessionData = await initializeSession(session);
             if ("session" in sessionData && sessionData?.session) {
                 setSession(sessionData?.session.id);
-                localSessionVar = sessionData?.session.id
-            } else if ("payload" in sessionData && sessionData?.payload && "id" in sessionData?.payload) {
+                localSessionVar = sessionData?.session.id;
+            } else if (
+                "payload" in sessionData && sessionData?.payload &&
+                "id" in sessionData?.payload
+            ) {
                 setSession(sessionData?.payload.id);
                 localSessionVar = sessionData?.payload.id;
             }
@@ -151,16 +177,23 @@ export default function Home() {
         // Create user statement
         await saveConversation(newQuery);
 
-        const convos = await getAllConversationsForASession(session ?? localSessionVar!);
+        const convos = await getAllConversationsForASession(
+            session ?? localSessionVar!,
+        );
         let conversations: { role: string; content: string }[];
         if (convos.status == "success") {
             const { payload } = convos;
             conversations = payload.map((load) => {
-                return { role: load.role, content: load.content, sessionId: load.sessionId, };
+                return {
+                    role: load.role,
+                    content: load.content,
+                    sessionId: load.sessionId,
+                };
             });
-            setAllConversations(conversations)
+            setAllConversations(conversations);
         } else {
-            throw new Error("Could not load conversations");
+            toastEmitter("Could not load conversations.", "error", 2000);
+            return;
         }
 
         const chatResponse = await chat(
@@ -188,7 +221,7 @@ export default function Home() {
         } else {
             setReasoning("");
             setResponse(chatResponse.message.content);
-            setAllConversations([...conversations, newResponse])
+            setAllConversations([...conversations, newResponse]);
             setLoading(false);
         }
         setQuery("");
@@ -216,11 +249,18 @@ export default function Home() {
                         for to make conversation with the brains
                     </p>
                 </div>
-                <section aria-labelledby="output" className="mx-8 mt-8 mb-0 p-2">
+                <section
+                    aria-labelledby="output"
+                    className="mx-8 mt-8 mb-0 p-2"
+                >
                     <h2 id="output" className="sr-only">Output</h2>
                     <PastConversations pastConversations={allConversations} />
                     <div id="outputContainer">
-                        <RenderModelResult loading={loading} reasoning={reasoning} response={response} />
+                        <RenderModelResult
+                            loading={loading}
+                            reasoning={reasoning}
+                            response={response}
+                        />
                     </div>
                 </section>
                 <form
@@ -230,7 +270,6 @@ export default function Home() {
                         await handleSubmit(event);
                     }}
                 >
-
                     <div className="flex flex-col">
                         <label
                             className="text-xs m-0 h-min"
@@ -243,7 +282,8 @@ export default function Home() {
                             id="modelSelect"
                             className="w-min p-2 m-0 dark:border-white border-2 rounded"
                         >
-                            {models?.current && models.current.models?.length > 0
+                            {models?.current &&
+                                    models.current.models?.length > 0
                                 ? models.current.models.map((model) => {
                                     return (
                                         <option
@@ -269,9 +309,7 @@ export default function Home() {
                         required={true}
                     >
                     </textarea>
-                    <Button
-                        type="submit"
-                    >
+                    <Button type="submit">
                         Talk to me
                     </Button>
                     <div className="flex flex-col">
@@ -290,7 +328,7 @@ export default function Home() {
                     </div>
                 </form>
             </div>
-            <Toaster/>
+            <Toaster />
         </main>
     );
 }
