@@ -5,13 +5,14 @@ export interface Session {
   }
 
  export interface Conversation {
-    id?: number
+    id: number
     session?: Session
-    sessionId?: number
+    sessionId: number
     role?: string
-    content?: string
-    createdAt?: Date
+    content: string
+    createdAt: Date
     archivedAt?: Date
+    model?: string
   }
 
   export interface Query {
