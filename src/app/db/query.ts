@@ -63,30 +63,33 @@ async function getAllConversationsForASession(seshId: number) {
         return ({ status: "success", payload: conversations });
     } catch {
         return { status: "failure", payload: [] };
-    } finally {
-        revalidatePath("/");
     }
 }
 
-async function getFirstConversationForASession(seshId: number) {
+async function getFirstConversationForASession(seshId: number): Promise<{status: string, payload: Conversation}> {
     try {
         const conversations = await prisma.conversation.findFirst({
             where: { sessionId: { equals: seshId } },
         });
-        return ({ status: "success", payload: conversations });
+        if (conversations === null) {
+            return { status: "failure", payload: [] as Conversation[] };
+        }
+        return ({ status: "success", payload: conversations});
     } catch {
-        return { status: "failure", payload: [] };
+        return { status: "failure", payload: [] as Conversation[] };
     }
 }
 
-async function getAllSessions() {
+async function getArchivedSessions() {
     try {
-        const sessions = await prisma.session.findMany();
+        const sessions = await prisma.session.findMany({
+            where: {
+                archived: true
+            }
+        });
         return ({ status: "success", payload: sessions });
     } catch {
         return { status: "failure", payload: [] };
-    } finally {
-        revalidatePath("/");
     }
 }
 
@@ -159,7 +162,7 @@ export {
     deleteConversations,
     deleteSession,
     getAllConversationsForASession,
-    getAllSessions,
+    getArchivedSessions,
     getLiveSessions,
     getConversation,
     getFirstConversationForASession,
