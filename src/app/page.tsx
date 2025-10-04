@@ -2,6 +2,9 @@
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
+import Header from "./components/header";
+import LeftRail from "./components/leftRail";
+import MainContent from "./components/mainContent";
 import SessionDisplay from "./components/sessionsDisplay";
 import Button from "./components/button";
 import Toaster from "./components/toaster/toaster";
@@ -11,10 +14,8 @@ import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
 import {
     fetchLiveSessions,
-    fetchSessions,
     initializeSession,
     saveConversation,
-    sessionDelete,
 } from "@/app/db_wrappers/middleware";
 import { archiveSession as archSesh } from "./db/query";
 
@@ -29,7 +30,7 @@ export default function Home() {
     const [reasoning, setReasoning] = useState("");
     const models = useRef<ListResponse | ErrorObj>(null);
     const [sessions, setSessions] = useState<
-        { id: number; createdAt: Date; archivedAt: Date | undefined }[] | []
+        { id: number; createdAt: Date; archived: boolean | undefined }[] | []
     >(
         [],
     );
@@ -45,26 +46,6 @@ export default function Home() {
             setQuery("");
             setSession(null);
             toastEmitter("New Session Created!", "info", 1000);
-        }
-    };
-
-    const deleteCurrentSession = async (): Promise<void> => {
-        if (session === null) return;
-        if (confirm("Are you sure you want to delete the current session?")) {
-            const deletedSession = await sessionDelete(session);
-            if (deletedSession.status === "failure") {
-                toastEmitter(
-                    deletedSession.message ?? "Failure deleting session!",
-                    "error",
-                    2000,
-                );
-            }
-            setResponse("");
-            setReasoning("");
-            setQuery("");
-            setSession(null);
-            setAllConversations([]);
-            fetchSessions().then(setSessions);
         }
     };
 
@@ -228,27 +209,21 @@ export default function Home() {
     };
 
     return (
-        <main className="dark:bg-black big-white dark:text-white text-black m-auto grid grid-cols-12 grid-rows-1 gap-1 max-w-screen">
-            <aside className="fixed max-w-min max-h-[100%] col-span-2 dark:text-white dark:bg-black dark:border-white bg-white border-r-2 border-black overflow-scroll">
-                <>
-                    {sessions.length > 0
-                        ? (
-                            <SessionDisplay
-                                sessions={sessions}
-                                sessionSetter={setSession}
-                                session={session}
-                            />
-                        )
-                        : <span>No sessions available.</span>}
-                </>
-            </aside>
-            <div className="col-start-4 col-end-12">
-                <div className="text-center my-3">
-                    <label htmlFor="oracleHole">Ai WebWeb</label>
-                    <p className="text-xs">
-                        for to make conversation with the brains
-                    </p>
-                </div>
+        <>
+            <LeftRail>
+                {sessions.length > 0
+                    ? (
+                        <SessionDisplay
+                            sessions={sessions}
+                            sessionSetter={setSession}
+                            session={session}
+                        />
+                    )
+                    : <span>No sessions available.</span>}
+
+            </LeftRail>
+            <MainContent>
+                <Header destination="/conversations" linkText="Old Sessions" />
                 <section
                     aria-labelledby="output"
                     className="mx-8 mt-8 mb-0 p-2"
@@ -283,7 +258,7 @@ export default function Home() {
                             className="w-min p-2 m-0 dark:border-white border-2 rounded"
                         >
                             {models?.current &&
-                                    models.current.models?.length > 0
+                                models.current.models?.length > 0
                                 ? models.current.models.map((model) => {
                                     return (
                                         <option
@@ -327,8 +302,8 @@ export default function Home() {
                         </Button>
                     </div>
                 </form>
-            </div>
+            </MainContent>
             <Toaster />
-        </main>
+        </>
     );
 }
