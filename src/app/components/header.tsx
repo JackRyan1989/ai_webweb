@@ -15,7 +15,7 @@ const Header = ({destination, linkText}: HeaderProps) => {
                 </p>
             </div>
             <Link
-                className="flex-1/6 text-center py-2 underline decoration-1"
+                className="flex-1/6 text-center py-2 hover:underline hover:decoration-1 hover:underline-offset-4"
                 href={destination}
             >
                 {linkText}
