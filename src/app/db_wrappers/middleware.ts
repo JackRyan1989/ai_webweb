@@ -3,24 +3,13 @@ import {
     createSession,
     deleteConversations,
     deleteSession,
-    getAllSessions,
     getLiveSessions,
     getSession,
 } from "@/app/db/query";
 
-export async function fetchSessions(): Promise<
-    { id: number; createdAt: Date ; archivedAt: Date}[] | []
-> {
-    const { status, payload } = await getAllSessions();
-    if (status == "failure") {
-        throw new Error("Failure loading sessions");
-    }
-    return payload;
-}
-
 // These are not archived sessions
 export async function fetchLiveSessions(): Promise<
-    { id: number; createdAt: Date ; archivedAt: Date}[] | []
+    { id: number; createdAt: Date ; archived: boolean}[] | []
 > {
     const { status, payload } = await getLiveSessions();
     if (status == "failure") {
