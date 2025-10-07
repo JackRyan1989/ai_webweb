@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 const prisma = new PrismaClient();
 
-async function createSession(conversation: Conversation = {}) {
+async function createSession(conversation = {} as Conversation) {
     // Create a new session table
     try {
         const session = await prisma.session.create({

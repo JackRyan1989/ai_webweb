@@ -11,6 +11,7 @@ import Toaster from "./components/toaster/toaster";
 import toastEmitter from "./components/toaster/toastEmitter";
 import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
+import { conductWebSearchTool, getHtmlRes } from "./brains/tools/webSearch";
 import PastConversations from "./components/pastConversations";
 import {
     fetchLiveSessions,
@@ -18,10 +19,6 @@ import {
     saveConversation,
 } from "@/app/db_wrappers/middleware";
 import { archiveSession as archSesh } from "./db/query";
-
-function separateReasoning(response: string) {
-    return response.split("</think>");
-}
 
 export default function Home() {
     const [query, setQuery] = useState("");
@@ -38,6 +35,10 @@ export default function Home() {
     const [allConversations, setAllConversations] = useState<
         { role: string; content: string }[]
     >([]);
+
+    const availableFunctions = {
+        "getHtmlRes": getHtmlRes,
+    };
 
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
@@ -155,6 +156,7 @@ export default function Home() {
             "sessionId": session ?? localSessionVar,
             model: model,
         };
+
         // Create user statement
         await saveConversation(newQuery);
 
@@ -180,32 +182,50 @@ export default function Home() {
         const chatResponse = await chat(
             conversations,
             model,
+            [conductWebSearchTool],
         );
 
         const newResponse = {
             "role": "assistant",
-            "content": (chatResponse as ChatResponse).message.content,
             "sessionId": session ?? localSessionVar,
             model: model,
-        };
+            content: '' as string | {
+                role: string;
+                content: string;
+            }[],
+        }
 
-        // Create model response statement
-        await saveConversation(newResponse);
+        if (chatResponse.message.tool_calls) {
+            for (const tool of chatResponse.message.tool_calls) {
+                console.log(tool);
+                const functionToCall = availableFunctions[tool.function.name];
+                if (functionToCall) {
+                    console.log("Calling function:", tool.function.name);
+                    console.log("Arguments:", tool.function.arguments);
+                    const output = functionToCall(tool.function.arguments);
+                    console.log("Function output:", output);
+                    const messages = [];
+                    messages.push(chatResponse.message);
+                    messages.push({
+                        role: 'tool',
+                        content: output.toString(),
+                    });
+                    newResponse['content'] = messages;
+                } else {
+                    newResponse['content'] = (chatResponse as ChatResponse).message.content
+                }
+            }
 
-        if (model == "deepseek-r1:1.5b") {
-            const [responseReasoning, responseContent] = separateReasoning(
-                chatResponse.message.content,
-            );
-            setReasoning(responseReasoning);
-            setResponse(responseContent);
-            setLoading(false);
-        } else {
+
+            // Create model response statement
+            await saveConversation(newResponse);
+
             setReasoning("");
             setResponse(chatResponse.message.content);
             setAllConversations([...conversations, newResponse]);
             setLoading(false);
+            setQuery("");
         }
-        setQuery("");
     };
 
     return (
@@ -220,7 +240,6 @@ export default function Home() {
                         />
                     )
                     : <span>No sessions available.</span>}
-
             </LeftRail>
             <MainContent>
                 <Header destination="/conversations" linkText="Old Sessions" />
@@ -258,7 +277,7 @@ export default function Home() {
                             className="w-min p-2 m-0 dark:border-white border-2 rounded"
                         >
                             {models?.current &&
-                                models.current.models?.length > 0
+                                    models.current.models?.length > 0
                                 ? models.current.models.map((model) => {
                                     return (
                                         <option
