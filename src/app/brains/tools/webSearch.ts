@@ -11,11 +11,11 @@ export const getHtmlRes = async (args: { query: string }) => {
             const parser = new DOMParser();
             const html = parser.parseFromString(body, 'text/html');
             return html.querySelector('body')?.innerHTML;
-        } catch (err) {
-            throw err
+        } catch {
+            return 'Could not fetch web results.'
         }
-    } catch (err) {
-        throw err
+    } catch {
+        return 'Could not perform web search.'
     }
 }
 

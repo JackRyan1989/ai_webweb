@@ -189,10 +189,7 @@ export default function Home() {
             "role": "assistant",
             "sessionId": session ?? localSessionVar,
             model: model,
-            content: '' as string | {
-                role: string;
-                content: string;
-            }[],
+            content: '',
         }
 
         if (chatResponse.message.tool_calls) {
@@ -206,11 +203,8 @@ export default function Home() {
                     console.log("Function output:", output);
                     const messages = [];
                     messages.push(chatResponse.message);
-                    messages.push({
-                        role: 'tool',
-                        content: output.toString(),
-                    });
-                    newResponse['content'] = messages;
+                    messages.push(output.toString());
+                    newResponse['content'] = messages.join('\nBegin Tool Response:\n');
                 } else {
                     newResponse['content'] = (chatResponse as ChatResponse).message.content
                 }

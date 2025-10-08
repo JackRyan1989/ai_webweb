@@ -10,8 +10,6 @@ const search = async (query: string, engine = "duckduckgo"): Promise<BaseRespons
         kl: "us-en",
     });
 
-    console.log(response);
-
     return response;
 }
 
