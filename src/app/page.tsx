@@ -11,7 +11,8 @@ import Toaster from "./components/toaster/toaster";
 import toastEmitter from "./components/toaster/toastEmitter";
 import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
-import { conductWebSearchTool, getHtmlRes } from "./brains/tools/webSearch";
+import { getHtmlRes } from "./brains/tools/webSearch";
+import { conductWebSearchTool } from "./brains/tools/toolDefs";
 import PastConversations from "./components/pastConversations";
 import {
     fetchLiveSessions,
@@ -36,7 +37,7 @@ export default function Home() {
         { role: string; content: string }[]
     >([]);
 
-    const availableFunctions = {
+    const availableFunctions: { [key: string]: (args: { query: string; }) => Promise<string | undefined> } = {
         "getHtmlRes": getHtmlRes,
     };
 
@@ -194,22 +195,22 @@ export default function Home() {
 
         if (chatResponse.message.tool_calls) {
             for (const tool of chatResponse.message.tool_calls) {
-                console.log(tool);
                 const functionToCall = availableFunctions[tool.function.name];
                 if (functionToCall) {
-                    console.log("Calling function:", tool.function.name);
-                    console.log("Arguments:", tool.function.arguments);
-                    const output = functionToCall(tool.function.arguments);
-                    console.log("Function output:", output);
+                    const output = await functionToCall(tool.function.arguments);
                     const messages = [];
-                    messages.push(chatResponse.message);
-                    messages.push(output.toString());
-                    newResponse['content'] = messages.join('\nBegin Tool Response:\n');
+                    messages.push(chatResponse.message.content);
+                    messages.push(output?.toString());
+                    const feedbackPrompt = messages.join('\nPlease interpret the following tool response to provide an answer to the user. Ignore the HTML structure of the document unless that is specifically what the user is asking about.\n');
+                    const intermediateResponse = await chat(
+                        [...conversations, { role: 'assistant', content: feedbackPrompt }],
+                        model
+                    );
+                    newResponse['content'] = (intermediateResponse as ChatResponse).message.content;
                 } else {
                     newResponse['content'] = (chatResponse as ChatResponse).message.content
                 }
             }
-
 
             // Create model response statement
             await saveConversation(newResponse);
@@ -271,7 +272,7 @@ export default function Home() {
                             className="w-min p-2 m-0 dark:border-white border-2 rounded"
                         >
                             {models?.current &&
-                                    models.current.models?.length > 0
+                                models.current.models?.length > 0
                                 ? models.current.models.map((model) => {
                                     return (
                                         <option
