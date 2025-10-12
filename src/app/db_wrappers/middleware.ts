@@ -3,20 +3,8 @@ import {
     createSession,
     deleteConversations,
     deleteSession,
-    getLiveSessions,
     getSession,
 } from "@/app/db/query";
-
-// These are not archived sessions
-export async function fetchLiveSessions(): Promise<
-    { id: number; createdAt: Date ; archived: boolean}[] | []
-> {
-    const { status, payload } = await getLiveSessions();
-    if (status == "failure") {
-        throw new Error("Failure loading sessions");
-    }
-    return payload;
-}
 
 export async function initializeSession(session: number | null) {
     try {

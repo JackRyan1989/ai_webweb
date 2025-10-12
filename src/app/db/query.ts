@@ -21,7 +21,6 @@ async function createSession(conversation: Conversation = {}) {
 }
 
 async function createConversation({ role, content, model, sessionId }: Query) {
-    // Create a new conversation table
     try {
         const conversation = await prisma.conversation.create({
             data: {
