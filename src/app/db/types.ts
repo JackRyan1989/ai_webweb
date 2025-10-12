@@ -8,11 +8,11 @@ export interface Session {
     id: number
     session?: Session
     sessionId: number
-    role?: string
+    role: string
     content: string
     createdAt: Date
-    archivedAt?: Date
-    model?: string
+    archived: boolean
+    model: string
   }
 
   export interface Query {

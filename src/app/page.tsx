@@ -13,21 +13,14 @@ import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
 import {
-    fetchLiveSessions,
-    initializeSession,
-    saveConversation,
+    initializeSession
 } from "@/app/db_wrappers/middleware";
-import { archiveSession as archSesh } from "./db/query";
-
-function separateReasoning(response: string) {
-    return response.split("</think>");
-}
+import { archiveSession as archSesh, createConversation ,getLiveSessions } from "./db/query";
 
 export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
     const [loading, setLoading] = useState<boolean | null>(null);
-    const [reasoning, setReasoning] = useState("");
     const models = useRef<ListResponse | ErrorObj>(null);
     const [sessions, setSessions] = useState<
         { id: number; createdAt: Date; archived: boolean | undefined }[] | []
@@ -42,7 +35,6 @@ export default function Home() {
     const createNewSession = (): void => {
         if (confirm("Are you sure you want to create a new session?")) {
             setResponse("");
-            setReasoning("");
             setQuery("");
             setSession(null);
             toastEmitter("New Session Created!", "info", 1000);
@@ -61,11 +53,10 @@ export default function Home() {
                 );
             }
             setResponse("");
-            setReasoning("");
             setQuery("");
             setSession(null);
             setAllConversations([]);
-            fetchLiveSessions().then(setSessions);
+            getLiveSessions().then(({payload}) => setSessions(payload));
             toastEmitter("Session Archived", "info", 1000);
         }
     };
@@ -89,9 +80,7 @@ export default function Home() {
                 models.current = res;
             }
         })();
-        fetchLiveSessions().then((sessions): void => {
-            setSessions(sessions);
-        }).catch(() => {
+        getLiveSessions().then(({payload}) => setSessions(payload)).catch(() => {
             toastEmitter("Error fetching sessions.", "error", 2000);
         });
     }, []);
@@ -146,7 +135,7 @@ export default function Home() {
                 setSession(sessionData?.payload.id);
                 localSessionVar = sessionData?.payload.id;
             }
-            fetchLiveSessions().then(setSessions);
+            getLiveSessions().then(({payload}) => setSessions(payload));
         }
 
         const newQuery = {
@@ -156,7 +145,10 @@ export default function Home() {
             model: model,
         };
         // Create user statement
-        await saveConversation(newQuery);
+        const userStatus = await createConversation(newQuery);
+        if (userStatus.status === "failure") {
+            toastEmitter("Failed to save conversation", "error", 2000);
+        }
 
         const convos = await getAllConversationsForASession(
             session ?? localSessionVar!,
@@ -190,21 +182,14 @@ export default function Home() {
         };
 
         // Create model response statement
-        await saveConversation(newResponse);
+        const modelResponseStatus = await createConversation(newResponse);
+        if (modelResponseStatus.status === "failure") {
+            toastEmitter("Failed to save conversation", "error", 2000);
+        }
 
-        if (model == "deepseek-r1:1.5b") {
-            const [responseReasoning, responseContent] = separateReasoning(
-                chatResponse.message.content,
-            );
-            setReasoning(responseReasoning);
-            setResponse(responseContent);
-            setLoading(false);
-        } else {
-            setReasoning("");
             setResponse(chatResponse.message.content);
             setAllConversations([...conversations, newResponse]);
             setLoading(false);
-        }
         setQuery("");
     };
 
@@ -233,7 +218,6 @@ export default function Home() {
                     <div id="outputContainer">
                         <RenderModelResult
                             loading={loading}
-                            reasoning={reasoning}
                             response={response}
                         />
                     </div>

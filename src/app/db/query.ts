@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 const prisma = new PrismaClient();
 
-async function createSession(conversation: Conversation = {}) {
+async function createSession(conversation = {}) {
     // Create a new session table
     try {
         const session = await prisma.session.create({
@@ -65,17 +65,17 @@ async function getAllConversationsForASession(seshId: number) {
     }
 }
 
-async function getFirstConversationForASession(seshId: number): Promise<{status: string, payload: Conversation}> {
+async function getFirstConversationForASession(seshId: number): Promise<{status: string, payload: Conversation | null}> {
     try {
         const conversations = await prisma.conversation.findFirst({
             where: { sessionId: { equals: seshId } },
         });
         if (conversations === null) {
-            return { status: "failure", payload: [] as Conversation[] };
+            return { status: "failure", payload: null };
         }
         return ({ status: "success", payload: conversations});
     } catch {
-        return { status: "failure", payload: [] as Conversation[] };
+        return { status: "failure", payload: null };
     }
 }
 

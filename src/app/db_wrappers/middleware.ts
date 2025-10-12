@@ -1,8 +1,5 @@
 import {
-    createConversation,
     createSession,
-    deleteConversations,
-    deleteSession,
     getSession,
 } from "@/app/db/query";
 
@@ -14,33 +11,9 @@ export async function initializeSession(session: number | null) {
             return await getSession(session);
         }
     } catch {
-        throw new Error("Failed to initialize new session");
-    }
-}
-
-export async function saveConversation(
-    query: {
-        role: string;
-        model: string;
-        sessionId: number | null;
-        content: string;
-    },
-) {
-    const convo = await createConversation(query);
-    if (convo.status == "failure") {
-        throw new Error("Failed to save conversation");
-    }
-    return convo;
-}
-
-export async function sessionDelete(sessionId: number) {
-    try {
-        const deletedConvos = await deleteConversations(sessionId);
-        if (deletedConvos.status === "failure") {
-            throw new Error("Failed to delete associated. conversations");
+        return {
+            status: 'failure',
+            session: {},
         }
-        return await deleteSession(sessionId);
-    } catch {
-        throw new Error("Failed to delete session");
     }
 }
