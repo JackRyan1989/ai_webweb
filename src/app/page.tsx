@@ -1,5 +1,5 @@
 "use client";
-import { SyntheticEvent, useEffect, useRef, useState } from "react";
+import { BaseSyntheticEvent, SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
 import { ChatResponse, ListResponse } from "ollama";
 import Header from "./components/header";
@@ -22,6 +22,7 @@ export default function Home() {
     const [response, setResponse] = useState("");
     const [loading, setLoading] = useState<boolean | null>(null);
     const models = useRef<ListResponse | ErrorObj>(null);
+    const [model, setModel] = useState('');
     const [sessions, setSessions] = useState<
         { id: number; createdAt: Date; archived: boolean | undefined }[] | []
     >(
@@ -93,8 +94,13 @@ export default function Home() {
                     await getAllConversationsForASession(session);
                 if (status != "success") {
                     setResponse("");
+                    return;
                 }
                 const lastResponse = payload.pop();
+                if (lastResponse) {
+                    const { model } = lastResponse;
+                    setModel(model)
+                }
                 setAllConversations(payload);
                 if (
                     typeof lastResponse == "object" &&
@@ -193,6 +199,10 @@ export default function Home() {
         setQuery("");
     };
 
+    const handleModelSelection = (e: BaseSyntheticEvent): void => {
+        setModel(e.target.value);
+    }
+
     return (
         <>
             <LeftRail>
@@ -240,9 +250,10 @@ export default function Home() {
                             name="selectedModel"
                             id="modelSelect"
                             className="w-min p-2 m-0 dark:border-white border-2 rounded"
+                            value={model}
+                            onChange={handleModelSelection}
                         >
-                            {models?.current &&
-                                models.current.models?.length > 0
+                            {models?.current
                                 ? models.current.models.map((model) => {
                                     return (
                                         <option
