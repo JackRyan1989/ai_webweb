@@ -1,7 +1,7 @@
 "use client";
 import { BaseSyntheticEvent, SyntheticEvent, useEffect, useRef, useState } from "react";
-import { chat, ErrorObj, fetchModelList } from "./brains/ollama";
-import { ChatResponse, ListResponse } from "ollama";
+import { chat, PayloadObj, fetchModelList } from "./brains/ollama";
+import { ChatResponse } from "ollama";
 import Header from "./components/header";
 import LeftRail from "./components/leftRail";
 import MainContent from "./components/mainContent";
@@ -21,7 +21,7 @@ export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
     const [loading, setLoading] = useState<boolean | null>(null);
-    const models = useRef<ListResponse | ErrorObj>(null);
+    const models = useRef<PayloadObj>({status: 'pending', payload: 'Models not loaded yet.'});
     const [model, setModel] = useState('');
     const [sessions, setSessions] = useState<
         { id: number; createdAt: Date; archived: boolean | undefined }[] | []
@@ -70,13 +70,13 @@ export default function Home() {
                 res = await fetchModelList();
             } catch {
                 res = {
-                    errStatus: "error",
-                    message:
+                    status: "error",
+                    payload:
                         "Issue fetching models. Make sure ollama is running.",
                 };
             }
-            if ("errStatus" in res && res["errStatus"] === "error") {
-                toastEmitter(res.message, "error", 2000);
+            if (res["status"] === "error" && typeof res.payload === 'string') {
+                toastEmitter(res.payload, "error", 2000);
             } else {
                 models.current = res;
             }
@@ -131,7 +131,7 @@ export default function Home() {
 
         if (session === null) {
             const sessionData = await initializeSession(session);
-            if ("session" in sessionData && sessionData?.session) {
+            if ("session" in sessionData && sessionData?.session && "id" in sessionData?.session) {
                 setSession(sessionData?.session.id);
                 localSessionVar = sessionData?.session.id;
             } else if (
@@ -253,8 +253,8 @@ export default function Home() {
                             value={model}
                             onChange={handleModelSelection}
                         >
-                            {models?.current
-                                ? models.current.models.map((model) => {
+                            {typeof models?.current.payload !== 'string'
+                                ? models.current.payload.models.map((model) => {
                                     return (
                                         <option
                                             key={model.model}

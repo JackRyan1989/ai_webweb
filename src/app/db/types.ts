@@ -11,7 +11,6 @@ export interface Session {
     role: string
     content: string
     createdAt: Date
-    archived: boolean
     model: string
   }
 

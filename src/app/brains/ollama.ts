@@ -2,9 +2,9 @@
 import ollama, { ChatResponse } from "ollama";
 import type { ListResponse } from "ollama";
 
-export interface ErrorObj {
-  errStatus: string,
-  message: string,
+export interface PayloadObj {
+  status: string,
+  payload: string | ListResponse,
 }
 
 export async function chat(content: { role: string; content: string; }[], model: string): Promise<ChatResponse> {
@@ -14,10 +14,11 @@ export async function chat(content: { role: string; content: string; }[], model:
   });
 }
 
-export async function fetchModelList(): Promise<ListResponse | ErrorObj> {
+export async function fetchModelList(): Promise<PayloadObj> {
   try {
-    return ollama.list();
+    const payload = await ollama.list();
+    return {status: 'success', payload};
   } catch {
-    return {errStatus: 'error', message: 'Ollama is not running!'}
+    return {status: 'error', payload: 'Ollama is not running!'}
   }
 }
