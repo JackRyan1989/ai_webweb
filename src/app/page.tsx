@@ -175,9 +175,10 @@ export default function Home() {
             return;
         }
 
-        const chatResponse = await chat(
-            conversations,
-            model,
+        const chatResponse = await chat({
+            messages: conversations,
+            model: model,
+        }
         );
 
         const newResponse = {
