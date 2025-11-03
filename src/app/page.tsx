@@ -1,6 +1,7 @@
 "use client";
 import { BaseSyntheticEvent, SyntheticEvent, useEffect, useRef, useState } from "react";
 import { chat, PayloadObj, fetchModelList } from "./brains/ollama";
+import type { ChatProps } from "./brains/ollama";
 import { ChatResponse } from "ollama";
 import Header from "./components/header";
 import LeftRail from "./components/leftRail";
@@ -9,9 +10,11 @@ import SessionDisplay from "./components/sessionsDisplay";
 import Button from "./components/button";
 import Toaster from "./components/toaster/toaster";
 import toastEmitter from "./components/toaster/toastEmitter";
+import { modelAbilities, modelList, webSearchTool } from "./constants";
 import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
+import webFetch from './api/serpFetch'
 import {
     initializeSession
 } from "@/app/db_wrappers/middleware";
@@ -126,7 +129,7 @@ export default function Home() {
         setLoading(true);
         const formData = new FormData(event.target as HTMLFormElement);
         const content = String(formData.get("input"));
-        const model = formData.get("selectedModel") as string;
+        const model = formData.get("selectedModel") as modelList;
         let localSessionVar: number | null = null;
 
         if (session === null) {
@@ -159,7 +162,9 @@ export default function Home() {
         const convos = await getAllConversationsForASession(
             session ?? localSessionVar!,
         );
+
         let conversations: { role: string; content: string }[];
+
         if (convos.status == "success") {
             const { payload } = convos;
             conversations = payload.map((load) => {
@@ -175,11 +180,36 @@ export default function Home() {
             return;
         }
 
-        const chatResponse = await chat({
+        const currentQuery: ChatProps = {
             messages: conversations,
             model: model,
         }
-        );
+
+        if (modelAbilities[model].capabilites.includes("tools")) {
+            currentQuery["tools"] = [webSearchTool];
+        }
+
+        const chatResponse = await chat(currentQuery);
+        const toolCalls = chatResponse.message.tool_calls;
+        console.log(toolCalls)
+        const availableTools: {webSearchTool: any} = {"webSearchTool": webFetch};
+
+        let output;
+
+        if (toolCalls) {
+            for (const tool of toolCalls) {
+                if (!(tool.function.name in availableTools)) {
+                    return;
+                }
+                const functionToCall = availableTools[tool.function.name];
+                console.log(functionToCall);
+                if (!functionToCall) {
+                    return;
+                }
+                output = await functionToCall(tool.function.arguments);
+                console.log(output)
+            }
+        }
 
         const newResponse = {
             "role": "assistant",

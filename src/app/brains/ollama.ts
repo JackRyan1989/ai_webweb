@@ -1,6 +1,7 @@
 "use server";
-import ollama, { ChatResponse } from "ollama";
+import ollama, { ChatResponse, Tool } from "ollama";
 import type { ListResponse } from "ollama";
+import type webSearchSchema from "./schemas"
 
 export interface PayloadObj {
   status: string;
@@ -10,18 +11,15 @@ export interface PayloadObj {
 export interface ChatProps {
   messages: { role: string; content: string }[];
   model: string;
-  tools?: [];
+  tools?: Tool[];
+  format?: typeof webSearchSchema
 }
 
 export async function chat(
-  { messages, model, tools }: ChatProps,
+  props: ChatProps,
 ): Promise<ChatResponse> {
-  const args: ChatProps = { model: model, messages: messages };
-  if (tools) {
-    args["tools"] = tools;
-  }
   return await ollama.chat({
-    ...args,
+    ...props,
   });
 }
 
