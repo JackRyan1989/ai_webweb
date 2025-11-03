@@ -27,7 +27,7 @@ export type modelList = "cogito:8b" | "granite3.1-moe:3b" | "smollm2:1.7b" | "qw
 export const webSearchTool = {
     type: 'function',
     function: {
-        name: 'webSearch',
+        name: 'webSearchTool',
         description: 'Search the web and return results in structured output.',
         parameters: {
             type: 'object',
