@@ -48,3 +48,8 @@ p, li {
 p:last-of-type {
   margin-top: 0;
 }
+
+a:hover,
+a:focus {
+  text-decoration: underline;
+}

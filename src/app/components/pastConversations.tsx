@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Markdown from "react-markdown";
 
 interface PastConversationsProps {
-    pastConversations: {role: string; content: string}[]; // Replace 'any[]' with the appropriate type if known
+    pastConversations: {role: string; content: string}[];
 }
 
 function capitalize(title: string): string {

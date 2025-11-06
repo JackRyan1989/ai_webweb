@@ -1,8 +1,13 @@
 "use client";
-import { BaseSyntheticEvent, SyntheticEvent, useEffect, useRef, useState } from "react";
-import { chat, PayloadObj, fetchModelList } from "./brains/ollama";
+import {
+    BaseSyntheticEvent,
+    SyntheticEvent,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+import { chat, fetchModelList, PayloadObj } from "./brains/ollama";
 import type { ChatProps } from "./brains/ollama";
-import { ChatResponse } from "ollama";
 import Header from "./components/header";
 import LeftRail from "./components/leftRail";
 import MainContent from "./components/mainContent";
@@ -14,18 +19,23 @@ import { modelAbilities, modelList, webSearchTool } from "./constants";
 import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
 import PastConversations from "./components/pastConversations";
-import webFetch from './api/serpFetch'
+import webFetch from "./api/serpFetch";
+import { initializeSession } from "@/app/db_wrappers/middleware";
 import {
-    initializeSession
-} from "@/app/db_wrappers/middleware";
-import { archiveSession as archSesh, createConversation ,getLiveSessions } from "./db/query";
+    archiveSession as archSesh,
+    createConversation,
+    getLiveSessions,
+} from "./db/query";
 
 export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
     const [loading, setLoading] = useState<boolean | null>(null);
-    const models = useRef<PayloadObj>({status: 'pending', payload: 'Models not loaded yet.'});
-    const [model, setModel] = useState('');
+    const models = useRef<PayloadObj>({
+        status: "pending",
+        payload: "Models not loaded yet.",
+    });
+    const [model, setModel] = useState("");
     const [sessions, setSessions] = useState<
         { id: number; createdAt: Date; archived: boolean | undefined }[] | []
     >(
@@ -41,6 +51,7 @@ export default function Home() {
             setResponse("");
             setQuery("");
             setSession(null);
+            setAllConversations([]);
             toastEmitter("New Session Created!", "info", 1000);
         }
     };
@@ -60,7 +71,7 @@ export default function Home() {
             setQuery("");
             setSession(null);
             setAllConversations([]);
-            getLiveSessions().then(({payload}) => setSessions(payload));
+            getLiveSessions().then(({ payload }) => setSessions(payload));
             toastEmitter("Session Archived", "info", 1000);
         }
     };
@@ -78,15 +89,17 @@ export default function Home() {
                         "Issue fetching models. Make sure ollama is running.",
                 };
             }
-            if (res["status"] === "error" && typeof res.payload === 'string') {
+            if (res["status"] === "error" && typeof res.payload === "string") {
                 toastEmitter(res.payload, "error", 2000);
             } else {
                 models.current = res;
             }
         })();
-        getLiveSessions().then(({payload}) => setSessions(payload)).catch(() => {
-            toastEmitter("Error fetching sessions.", "error", 2000);
-        });
+        getLiveSessions().then(({ payload }) => setSessions(payload)).catch(
+            () => {
+                toastEmitter("Error fetching sessions.", "error", 2000);
+            },
+        );
     }, []);
 
     // This is what we want done when session changes:
@@ -102,7 +115,7 @@ export default function Home() {
                 const lastResponse = payload.pop();
                 if (lastResponse) {
                     const { model } = lastResponse;
-                    setModel(model)
+                    setModel(model);
                 }
                 setAllConversations(payload);
                 if (
@@ -134,7 +147,10 @@ export default function Home() {
 
         if (session === null) {
             const sessionData = await initializeSession(session);
-            if ("session" in sessionData && sessionData?.session && "id" in sessionData?.session) {
+            if (
+                "session" in sessionData && sessionData?.session &&
+                "id" in sessionData?.session
+            ) {
                 setSession(sessionData?.session.id);
                 localSessionVar = sessionData?.session.id;
             } else if (
@@ -144,7 +160,7 @@ export default function Home() {
                 setSession(sessionData?.payload.id);
                 localSessionVar = sessionData?.payload.id;
             }
-            getLiveSessions().then(({payload}) => setSessions(payload));
+            getLiveSessions().then(({ payload }) => setSessions(payload));
         }
 
         const newQuery = {
@@ -183,7 +199,7 @@ export default function Home() {
         const currentQuery: ChatProps = {
             messages: conversations,
             model: model,
-        }
+        };
 
         if (modelAbilities[model].capabilites.includes("tools")) {
             currentQuery["tools"] = [webSearchTool];
@@ -191,10 +207,18 @@ export default function Home() {
 
         const chatResponse = await chat(currentQuery);
         const toolCalls = chatResponse.message.tool_calls;
-        console.log(toolCalls)
-        const availableTools: {webSearchTool: any} = {"webSearchTool": webFetch};
+        const availableTools = {
+            "webSearchTool": webFetch,
+        };
 
-        let output;
+        const toolOutput = [...conversations];
+
+        const newResponse = {
+            "role": "assistant",
+            "content": '',
+            "sessionId": session ?? localSessionVar,
+            model: model,
+        };
 
         if (toolCalls) {
             for (const tool of toolCalls) {
@@ -202,21 +226,34 @@ export default function Home() {
                     return;
                 }
                 const functionToCall = availableTools[tool.function.name];
-                console.log(functionToCall);
-                if (!functionToCall) {
-                    return;
-                }
-                output = await functionToCall(tool.function.arguments);
-                console.log(output)
-            }
-        }
+                try {
+                    const {ok, message} = await functionToCall(tool.function.arguments);
 
-        const newResponse = {
-            "role": "assistant",
-            "content": (chatResponse as ChatResponse).message.content,
-            "sessionId": session ?? localSessionVar,
-            model: model,
-        };
+                    if (!ok) {
+                        toolOutput.push({role: 'tool', content: "Could not perform tool call."});
+                        return;
+                    }
+
+                    toolOutput.push({role: "user", content: "Please list the url and title from the tool response at the top of your response."})
+                    toolOutput.push(chatResponse.message);
+                    toolOutput.push({
+                        role: 'tool',
+                        content: JSON.stringify(Object.entries(message)[0])
+                    })
+                } catch {
+                    toolOutput.push({role: 'tool', content: "Could not perform tool call."});
+                }
+            }
+
+            const finalResponse = await chat({
+                model: model,
+                messages: toolOutput
+            });
+
+            newResponse.content = finalResponse.message.content
+        } else {
+            newResponse.content = chatResponse.message.content
+        }
 
         // Create model response statement
         const modelResponseStatus = await createConversation(newResponse);
@@ -224,15 +261,15 @@ export default function Home() {
             toastEmitter("Failed to save conversation", "error", 2000);
         }
 
-            setResponse(chatResponse.message.content);
-            setAllConversations([...conversations, newResponse]);
-            setLoading(false);
+        setResponse(newResponse.content);
+        setAllConversations([...conversations, newResponse]);
+        setLoading(false);
         setQuery("");
     };
 
     const handleModelSelection = (e: BaseSyntheticEvent): void => {
         setModel(e.target.value);
-    }
+    };
 
     return (
         <>
@@ -246,7 +283,6 @@ export default function Home() {
                         />
                     )
                     : <span>No sessions available.</span>}
-
             </LeftRail>
             <MainContent>
                 <Header destination="/conversations" linkText="Old Sessions" />
@@ -284,7 +320,7 @@ export default function Home() {
                             value={model}
                             onChange={handleModelSelection}
                         >
-                            {typeof models?.current.payload !== 'string'
+                            {typeof models?.current.payload !== "string"
                                 ? models.current.payload.models.map((model) => {
                                     return (
                                         <option
