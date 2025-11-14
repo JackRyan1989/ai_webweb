@@ -9,7 +9,10 @@ export const modelAbilities = {
         capabilites: ["completion", "tools"],
     },
     "qwen3:8b": {
-        capabilites: ["completion"," thinking", "tools"],
+        capabilites: ["completion", "thinking", "tools"],
+    },
+    "qwen3-vl:8b" : {
+        capabilites: ["completion", "thinking", "tools", "vision"],
     },
     "gemma3:4b": {
         capabilites: ["completion", "vision"],
@@ -22,7 +25,8 @@ export const modelAbilities = {
     },
 };
 
-export type modelList = "cogito:8b" | "granite3.1-moe:3b" | "smollm2:1.7b" | "qwen3:8b" | "gemma3:4b" | "llama3.2:3b" | "gemma3:1b"
+
+export type modelList = keyof typeof modelAbilities;
 
 export const webSearchTool = {
     type: 'function',

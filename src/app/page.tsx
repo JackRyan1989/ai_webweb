@@ -15,6 +15,7 @@ import SessionDisplay from "./components/sessionsDisplay";
 import Button from "./components/button";
 import Toaster from "./components/toaster/toaster";
 import toastEmitter from "./components/toaster/toastEmitter";
+import ImageInput from "./components/imageInput";
 import { modelAbilities, modelList, webSearchTool } from "./constants";
 import { getAllConversationsForASession } from "./db/query";
 import { RenderModelResult } from "./components/modelResponse";
@@ -334,6 +335,9 @@ export default function Home() {
                                 : null}
                         </select>
                     </div>
+                    {
+                        modelAbilities[model as modelList]?.capabilites.includes("vision") ? <ImageInput /> : null
+                    }
                     <textarea
                         className="border-2 rounded p-2"
                         id="input"
