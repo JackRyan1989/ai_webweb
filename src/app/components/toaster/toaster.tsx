@@ -4,7 +4,6 @@ export default function Toaster() {
     return (
         <ToastContainer
             position="bottom-center"
-            autoClose={1000}
             hideProgressBar
             newestOnTop
             closeOnClick
@@ -12,7 +11,7 @@ export default function Toaster() {
             pauseOnFocusLoss
             draggable
             pauseOnHover
-            theme="dark"
+            theme="light"
             transition={Slide}
         />
     );

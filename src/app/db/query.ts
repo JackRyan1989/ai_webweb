@@ -20,8 +20,14 @@ async function createSession(conversation = {}) {
     }
 }
 
-async function createConversation({ role, content, model, sessionId }: Query) {
+async function createConversation(props: Query) {
+    console.log("Creating conversation")
+    console.log(props);
+    const {content, model, role, sessionId} = props;
     try {
+        if (typeof props.sessionId !== "number") {
+            throw new Error("You need to provide a valid session id. It must be a number.")
+        }
         const conversation = await prisma.conversation.create({
             data: {
                 content: content,
@@ -30,6 +36,7 @@ async function createConversation({ role, content, model, sessionId }: Query) {
                 sessionId: sessionId as number,
             },
         });
+        console.log(conversation)
         return { status: "success", conversation };
     } catch (e) {
         return { status: "failure", e };
@@ -65,7 +72,7 @@ async function getAllConversationsForASession(seshId: number) {
     }
 }
 
-async function getFirstConversationForASession(seshId: number): Promise<{status: string, payload: Conversation | null}> {
+async function getFirstConversationForASession(seshId: number): Promise<{ status: string, payload: Conversation | null }> {
     try {
         const conversations = await prisma.conversation.findFirst({
             where: { sessionId: { equals: seshId } },
@@ -73,7 +80,7 @@ async function getFirstConversationForASession(seshId: number): Promise<{status:
         if (conversations === null) {
             return { status: "failure", payload: null };
         }
-        return ({ status: "success", payload: conversations});
+        return ({ status: "success", payload: conversations });
     } catch {
         return { status: "failure", payload: null };
     }
@@ -140,12 +147,13 @@ async function deleteSession(seshId: number) {
 async function archiveSession(seshId: number) {
     try {
         await prisma.session.update({
-         where: {
-            id: seshId,
-        },
-        data: {
-            archived: true,
-        }});
+            where: {
+                id: seshId,
+            },
+            data: {
+                archived: true,
+            }
+        });
         return { status: "success" };
     } catch (e) {
         return { status: "failure", message: `${e}` };

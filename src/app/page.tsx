@@ -27,16 +27,20 @@ import {
     createConversation,
     getLiveSessions,
 } from "./db/query";
+import convertImageToBase64 from './utils/imageToBase64'
+import type { Message } from "ollama";
+import { Query } from "./db/types";
 
 export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
+    const [image, setImage] = useState<string | ArrayBuffer | Buffer | null | undefined>(null);
     const [loading, setLoading] = useState<boolean | null>(null);
     const models = useRef<PayloadObj>({
         status: "pending",
         payload: "Models not loaded yet.",
     });
-    const [model, setModel] = useState("");
+    const [model, setModel] = useState("qwen3-vl:8b");
     const [sessions, setSessions] = useState<
         { id: number; createdAt: Date; archived: boolean | undefined }[] | []
     >(
@@ -44,7 +48,7 @@ export default function Home() {
     );
     const [session, setSession] = useState<number | null>(null);
     const [allConversations, setAllConversations] = useState<
-        { role: string; content: string }[]
+        Message[]
     >([]);
 
     const createNewSession = (): void => {
@@ -96,6 +100,7 @@ export default function Home() {
                 models.current = res;
             }
         })();
+
         getLiveSessions().then(({ payload }) => setSessions(payload)).catch(
             () => {
                 toastEmitter("Error fetching sessions.", "error", 2000);
@@ -137,12 +142,12 @@ export default function Home() {
         setQuery(event?.target?.value ?? "");
     };
 
-    const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
+        e.preventDefault();
         setResponse("pending");
         setLoading(true);
-        const formData = new FormData(event.target as HTMLFormElement);
-        const content = String(formData.get("input"));
+        const formData = new FormData(e.target as HTMLFormElement);
+        let content = String(formData.get("input"));
         const model = formData.get("selectedModel") as modelList;
         let localSessionVar: number | null = null;
 
@@ -164,14 +169,24 @@ export default function Home() {
             getLiveSessions().then(({ payload }) => setSessions(payload));
         }
 
-        const newQuery = {
+        const newQuery: Query = {
             "role": "user",
-            "content": content,
+            "content": "",
+            "images": null,
             "sessionId": session ?? localSessionVar,
             model: model,
-        };
+        }
+
+        if (image) {
+            content = content.concat(`\n\n Do not perform a web search. The image in question is in Base 64 format.\n`)
+            newQuery["images"] = {"url": image as string};
+        }
+
+        newQuery["content"] = content
+
         // Create user statement
         const userStatus = await createConversation(newQuery);
+        console.log(userStatus)
         if (userStatus.status === "failure") {
             toastEmitter("Failed to save conversation", "error", 2000);
         }
@@ -180,11 +195,12 @@ export default function Home() {
             session ?? localSessionVar!,
         );
 
-        let conversations: { role: string; content: string }[];
+        let conversations: Message[];
 
         if (convos.status == "success") {
             const { payload } = convos;
             conversations = payload.map((load) => {
+                console.log(load);
                 return {
                     role: load.role,
                     content: load.content,
@@ -272,6 +288,16 @@ export default function Home() {
         setModel(e.target.value);
     };
 
+    const imageUploadHandler = async (e: BaseSyntheticEvent): Promise<void> => {
+        const res = await convertImageToBase64(e);
+        if (res.ok && res.message) {
+            setImage(res.message)
+        } else {
+            const message = typeof res.message === "string" ? res.message : "Could not process image."
+            toastEmitter(message, "error", 2000);
+        }
+    }
+
     return (
         <>
             <LeftRail>
@@ -336,7 +362,7 @@ export default function Home() {
                         </select>
                     </div>
                     {
-                        modelAbilities[model as modelList]?.capabilites.includes("vision") ? <ImageInput /> : null
+                        modelAbilities[model as modelList]?.capabilites.includes("vision") ? <ImageInput changeHandler={imageUploadHandler} /> : null
                     }
                     <textarea
                         className="border-2 rounded p-2"
@@ -345,7 +371,7 @@ export default function Home() {
                         rows={7}
                         cols={33}
                         value={query}
-                        onChange={(event) => handleInput(event)}
+                        onChange={handleInput}
                         minLength={1}
                         required={true}
                     >

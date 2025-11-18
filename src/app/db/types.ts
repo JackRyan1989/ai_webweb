@@ -10,13 +10,19 @@ export interface Session {
     sessionId: number
     role: string
     content: string
+    images: Image | null
     createdAt: Date
     model: string
+  }
+
+  export interface Image {
+    "url": string
   }
 
   export interface Query {
     role: string
     content: string
     sessionId: number | null
+    images: Image | null
     model: string
   }

@@ -24,8 +24,16 @@ model Conversation {
   id Int @id @default(autoincrement())
   content String
   createdAt DateTime @default(now())
+  images Image?
   model String @default("gemma3:4b")
   role String
   session Session @relation(fields: [sessionId], references: [id])
   sessionId Int
+}
+
+model Image {
+  id Int @id @default(autoincrement())
+  url String
+  conversation Conversation @relation(fields: [conversationId], references: [id] )
+  conversationId Int @unique
 }
