@@ -1,5 +1,5 @@
 "use client";
-import {
+import React, {
     BaseSyntheticEvent,
     SyntheticEvent,
     useEffect,
@@ -25,16 +25,19 @@ import { initializeSession } from "@/app/db_wrappers/middleware";
 import {
     archiveSession as archSesh,
     createConversation,
+    createImage,
     getLiveSessions,
 } from "./db/query";
-import convertImageToBase64 from './utils/imageToBase64'
+import convertImageToBase64 from "./utils/imageToBase64";
 import type { Message } from "ollama";
 import { Query } from "./db/types";
 
 export default function Home() {
     const [query, setQuery] = useState("");
     const [response, setResponse] = useState("");
-    const [image, setImage] = useState<string | ArrayBuffer | Buffer | null | undefined>(null);
+    const [image, setImage] = useState<
+        string | ArrayBuffer | Buffer | null | undefined
+    >(null);
     const [loading, setLoading] = useState<boolean | null>(null);
     const models = useRef<PayloadObj>({
         status: "pending",
@@ -57,6 +60,7 @@ export default function Home() {
             setQuery("");
             setSession(null);
             setAllConversations([]);
+            setImage(null);
             toastEmitter("New Session Created!", "info", 1000);
         }
     };
@@ -175,18 +179,19 @@ export default function Home() {
             "images": null,
             "sessionId": session ?? localSessionVar,
             model: model,
-        }
+        };
 
         if (image) {
-            content = content.concat(`\n\n Do not perform a web search. The image in question is in Base 64 format.\n`)
-            newQuery["images"] = {"url": image as string};
+            content = content.concat(
+                `\n\n Do not perform a web search. The image in question is in Base 64 format.\n`,
+            ).concat(`Image: ${image as string}`);
+            //newQuery["images"] = [image as string];
         }
 
-        newQuery["content"] = content
+        newQuery["content"] = content;
 
         // Create user statement
         const userStatus = await createConversation(newQuery);
-        console.log(userStatus)
         if (userStatus.status === "failure") {
             toastEmitter("Failed to save conversation", "error", 2000);
         }
@@ -232,7 +237,7 @@ export default function Home() {
 
         const newResponse = {
             "role": "assistant",
-            "content": '',
+            "content": "",
             "sessionId": session ?? localSessionVar,
             model: model,
         };
@@ -244,32 +249,44 @@ export default function Home() {
                 }
                 const functionToCall = availableTools[tool.function.name];
                 try {
-                    const {ok, message} = await functionToCall(tool.function.arguments);
+                    const { ok, message } = await functionToCall(
+                        tool.function.arguments,
+                    );
 
                     if (!ok) {
-                        toolOutput.push({role: 'tool', content: "Could not perform tool call."});
+                        toolOutput.push({
+                            role: "tool",
+                            content: "Could not perform tool call.",
+                        });
                         return;
                     }
 
-                    toolOutput.push({role: "user", content: "Please list the url and title from the tool response at the top of your response."})
+                    toolOutput.push({
+                        role: "user",
+                        content:
+                            "Please list the url and title from the tool response at the top of your response.",
+                    });
                     toolOutput.push(chatResponse.message);
                     toolOutput.push({
-                        role: 'tool',
-                        content: JSON.stringify(Object.entries(message)[0])
-                    })
+                        role: "tool",
+                        content: JSON.stringify(Object.entries(message)[0]),
+                    });
                 } catch {
-                    toolOutput.push({role: 'tool', content: "Could not perform tool call."});
+                    toolOutput.push({
+                        role: "tool",
+                        content: "Could not perform tool call.",
+                    });
                 }
             }
 
             const finalResponse = await chat({
                 model: model,
-                messages: toolOutput
+                messages: toolOutput,
             });
 
-            newResponse.content = finalResponse.message.content
+            newResponse.content = finalResponse.message.content;
         } else {
-            newResponse.content = chatResponse.message.content
+            newResponse.content = chatResponse.message.content;
         }
 
         // Create model response statement
@@ -282,6 +299,7 @@ export default function Home() {
         setAllConversations([...conversations, newResponse]);
         setLoading(false);
         setQuery("");
+        setImage(null);
     };
 
     const handleModelSelection = (e: BaseSyntheticEvent): void => {
@@ -291,12 +309,14 @@ export default function Home() {
     const imageUploadHandler = async (e: BaseSyntheticEvent): Promise<void> => {
         const res = await convertImageToBase64(e);
         if (res.ok && res.message) {
-            setImage(res.message)
+            setImage(res.message);
         } else {
-            const message = typeof res.message === "string" ? res.message : "Could not process image."
+            const message = typeof res.message === "string"
+                ? res.message
+                : "Could not process image.";
             toastEmitter(message, "error", 2000);
         }
-    }
+    };
 
     return (
         <>
@@ -305,7 +325,7 @@ export default function Home() {
                     ? (
                         <SessionDisplay
                             sessions={sessions}
-                            sessionSetter={setSession}
+                            sessionSetterAction={setSession}
                             session={session}
                         />
                     )
@@ -361,9 +381,11 @@ export default function Home() {
                                 : null}
                         </select>
                     </div>
-                    {
-                        modelAbilities[model as modelList]?.capabilites.includes("vision") ? <ImageInput changeHandler={imageUploadHandler} /> : null
-                    }
+                    {modelAbilities[model as modelList]?.capabilites.includes(
+                            "vision",
+                        )
+                        ? <ImageInput changeHandler={imageUploadHandler} />
+                        : null}
                     <textarea
                         className="border-2 rounded p-2"
                         id="input"

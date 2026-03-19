@@ -35,5 +35,5 @@ model Image {
   id Int @id @default(autoincrement())
   url String
   conversation Conversation @relation(fields: [conversationId], references: [id] )
-  conversationId Int @unique
+  conversationId Int
 }

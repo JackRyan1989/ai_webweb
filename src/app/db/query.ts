@@ -21,12 +21,10 @@ async function createSession(conversation = {}) {
 }
 
 async function createConversation(props: Query) {
-    console.log("Creating conversation")
-    console.log(props);
     const {content, model, role, sessionId} = props;
     try {
         if (typeof props.sessionId !== "number") {
-            throw new Error("You need to provide a valid session id. It must be a number.")
+            return { status: "failure", message: "You need to provide a valid session id. It must be a number." }
         }
         const conversation = await prisma.conversation.create({
             data: {
@@ -35,13 +33,29 @@ async function createConversation(props: Query) {
                 role: role,
                 sessionId: sessionId as number,
             },
-        });
-        console.log(conversation)
+        })
         return { status: "success", conversation };
     } catch (e) {
         return { status: "failure", e };
     } finally {
         revalidatePath("/");
+    }
+}
+
+async function createImage(convoID: number, url: string) {
+    try {
+        const image = prisma.image.create({
+            data: {
+                url: url,
+                conversationId: convoID
+            }
+        })
+        console.log({image});
+        return {
+            status: 'success', image: image
+        }
+    } catch (e) {
+        return { status: "failure", e };
     }
 }
 
@@ -165,6 +179,7 @@ async function archiveSession(seshId: number) {
 export {
     archiveSession,
     createConversation,
+    createImage,
     createSession,
     deleteConversations,
     deleteSession,

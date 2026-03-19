@@ -14,6 +14,9 @@ export const modelAbilities = {
     "qwen3-vl:8b" : {
         capabilites: ["completion", "thinking", "tools", "vision"],
     },
+    "qwen3.5:4b" : {
+        capabilites: ["completion", "thinking", "tools", "vision"],
+    },
     "gemma3:4b": {
         capabilites: ["completion", "vision"],
     },

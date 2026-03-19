@@ -9,9 +9,9 @@ const sessionHandler = (id: number, sessionSetter: (id: number) => void) => {
 };
 
 export default function SessionDisplay(
-    { sessions = [], sessionSetter, session }: {
+    { sessions = [], sessionSetterAction, session }: {
         sessions: [] | { id: number; createdAt: Date }[];
-        sessionSetter: (id: number) => void;
+        sessionSetterAction: (id: number) => void;
         session: number | null;
     },
 ): ReactNode | Array<ReactNode> {
@@ -47,7 +47,7 @@ export default function SessionDisplay(
             )[0];
             return (
                 <button
-                    onClick={() => sessionHandler(sesh.id, sessionSetter)}
+                    onClick={() => sessionHandler(sesh.id, sessionSetterAction)}
                     className={`min-w-min text-sm border-solid border-2 border-black outline p-[.5rem] m-[.5rem] rounded-xs ${session === sesh.id ? "bg-lime-200 dark:bg-white dark:text-black dark:border-orange-400 dark:border-dashed" : "bg-transparent"
                         }`}
                     key={sesh.id}

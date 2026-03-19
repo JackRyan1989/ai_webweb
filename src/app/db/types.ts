@@ -23,6 +23,6 @@ export interface Session {
     role: string
     content: string
     sessionId: number | null
-    images: Image | null
+    images: Array<string> | null
     model: string
   }
